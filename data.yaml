@@ -3,7 +3,7 @@
 #r_name: Name of the replacement add-on
 #r_link: Link for the "Learn more" button, must go to a SUMO article or an ATN add-on
 #r_id: ID of the replacement add-on
-#r_desc: [instead of r_id] HTML string with descriptions on how to accomplish similar things directly with Thunderbird, without using any ad-on
+#r_desc: [instead of r_id] HTML string with descriptions on how to accomplish similar things directly with Thunderbird, without using any add-on
 ---
 u_name: Correct Identity
 u_id: {47ef7cc0-2201-11da-8cd6-0800200c9a66}
