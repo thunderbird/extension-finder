@@ -34,3 +34,9 @@ u_id: gContactSync@pirules.net
 r_name: Thunderbird native CardDAV support
 r_link: https://support.mozilla.org/en-US/questions/1321916
 r_desc: <p>Thunderbird has integrated CardDAV support since Beta 85, with which Google address books can also be connected. However, Google does not support all CardDAV specifications and therefore not all Google features are available, for example groups.</p>
+---
+u_name: Nextcloud for Filelink
+u_id: owncloud@viguierjust.com
+r_name: *cloud - FileLink for Nextcloud and ownCloud
+r_link: https://addons.thunderbird.net/addon/filelink-nextcloud-owncloud
+r_id: cloud@johannes-endres.de
