@@ -1,28 +1,30 @@
 ---
 u_name: Correct Identity
-u_link: https://addons.thunderbird.net/addon/correct-identity/
 u_id: {47ef7cc0-2201-11da-8cd6-0800200c9a66}
 r_name: Identity Chooser
 r_link: https://addons.thunderbird.net/addon/identity-chooser/
 r_id: identitychooser@janek.org
 ---
 u_name: Get All Mail Button
-u_link: https://addons.thunderbird.net/addon/get-all-mail-button/
 u_id: {0D4D76B0-657A-41b0-B3ED-60C638F4D97D}
 r_name: Get All Mail Button for TB78++
 r_link: https://addons.thunderbird.net/addon/get-all-mail-button-for-tb78/
 r_id: gamb@pharqcon.com
 ---
 u_name: gContactSync
-u_link: https://addons.thunderbird.net/addon/gcontactsync/
 u_id: gContactSync@pirules.net
 r_name: Google-4-TbSync
 r_link: https://addons.thunderbird.net/addon/google-4-tbsync/
 r_id: google-4-tbsync@marcozanon.com
 ---
 u_name: gContactSync
-u_link: https://addons.thunderbird.net/addon/gcontactsync/
 u_id: gContactSync@pirules.net
 r_name: CardBook
 r_link: https://addons.thunderbird.net/addon/cardbook/
 r_id: cardbook@vigneau.philippe
+---
+u_name: gContactSync
+u_id: gContactSync@pirules.net
+r_name: Thunderbird native CardDAV support
+r_link: https://support.mozilla.org/en-US/questions/1321916
+r_desc: <p>Thunderbird has integrated CardDAV support since Beta 85, with which Google address books can also be connected. However, Google does not support all CardDAV specifications and therefore not all Google features are available, for example groups.</p>

@@ -1,5 +1,13 @@
 /* global lunr */
 
+// If we consider to use google sheets as data source, these might be useful:
+// const slugMatch = /\/addon\/([^\/]+)\//;
+// const sheetId = '1ZzheVRDnEpAwdQ3eHDVI6Hu5om5zhp2YtSCeB0mmLUQ';
+// const url = `https://spreadsheets.google.com/feeds/list/${sheetId}/1/public/full?alt=json`;
+// const U_NAME_FIELD = "u_name"; //.gsx$legacycontent.$t,
+// const R_NAME_FIELD = "r_name"; //.gsx$webextensionreplacement.$t,
+// const R_LINK_FIELD = "r_link"; //.gsx$url.$t
+
 async function dataToJSON(data) {
   let entries = [];
   
@@ -38,8 +46,6 @@ async function dataToJSON(data) {
   return entries;
 }
 
-//const slugMatch = /\/addon\/([^\/]+)\//;
-
 const templates = {
   results: {
     addon: $('#search-result-addon'),
@@ -58,9 +64,7 @@ function $(selector, parent=document) {
   return parent.querySelector(selector);
 }
 
-function loadData() {
-  // const sheetId = '1ZzheVRDnEpAwdQ3eHDVI6Hu5om5zhp2YtSCeB0mmLUQ';
-  // let url = `https://spreadsheets.google.com/feeds/list/${sheetId}/1/public/full?alt=json`;
+async function loadData() {
   let url = "https://raw.githubusercontent.com/thundernest/extension-finder/master/data.yaml"
   return fetch(url).then(r => r.text()).then(dataToJSON);
 }
@@ -73,8 +77,7 @@ function buildIndex(data) {
 
   let addons = {};
   
-  // data.feed.entry.forEach(e => {
-  data.forEach(e => {
+  data.forEach(e => { // google sheets will need in data.feed.entry
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
@@ -87,21 +90,15 @@ function buildIndex(data) {
 
 function process(entry) {
   let obj = {
-    idx: entry["r_name"],//.gsx$legacycontent.$t,
-    name: entry["u_name"],//.gsx$legacycontent.$t,
+    idx: entry["r_name"],
+    name: entry["u_name"],
     suggested: {
-      name: entry["r_name"],//.gsx$webextensionreplacement.$t,
-      url: entry["r_link"],//.gsx$url.$t
-      slug: entry["r_id"],
+      name: entry["r_name"],
+      url: entry["r_link"],
+      id: entry["r_id"],
+      desc: entry["r_desc"],
     }
   };
-  
-  /*let match = obj.suggested.url.match(slugMatch);
-  
-  if (match) {
-    obj.suggested.slug = match[1];
-  }*/
-  
   return obj;
 }
 
@@ -151,7 +148,7 @@ function init({ idx, addons }) {
 }
 
 function resultRow(result) {
-  if (result.suggested.slug) {
+  if (result.suggested.id) {
     return addonResult(result);
   }
   return generalResult(result);
@@ -159,13 +156,13 @@ function resultRow(result) {
 
 let cachedAddons = {};
 
-function getAddonData(slug) {
+function getAddonData(id) {
   return new Promise((resolve, reject) => {
-    if (slug in cachedAddons) {
-      resolve(cachedAddons[slug]);
+    if (id in cachedAddons) {
+      resolve(cachedAddons[id]);
     } else {
-      let p = fetch(`https://addons.thunderbird.net/api/v4/addons/addon/${slug}/`).then(r => r.json())
-      p.then(data => cachedAddons[slug] = p);
+      let p = fetch(`https://addons.thunderbird.net/api/v4/addons/addon/${id}/`).then(r => r.json())
+      p.then(data => cachedAddons[id] = p);
       resolve(p);
     }
   });
@@ -180,7 +177,7 @@ function addonResult(result) {
     let authorEl = $('.alt-author');
     let iconEl = $('.icon');
     
-    getAddonData(result.suggested.slug)
+    getAddonData(result.suggested.id)
     .then(data => {
       authorEl.textContent = data.authors.map(a => a.name).join(', ');
       iconEl.src = data.icon_url;
@@ -193,6 +190,10 @@ function generalResult(result) {
     $('.legacy-name').textContent = result.name;
     $('.alt-name').textContent = result.suggested.name;
     $('.cta .button').setAttribute('href', result.suggested.url);    
+
+    if (result.suggested.desc) {
+      $('.alt-desc').insertAdjacentHTML('afterbegin', result.suggested.desc);
+    }
   });
 }
 
