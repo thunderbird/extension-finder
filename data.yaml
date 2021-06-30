@@ -5,6 +5,12 @@
 #r_id: ID of the replacement add-on
 #r_desc: [instead of r_id] HTML string with descriptions on how to accomplish similar things directly with Thunderbird, without using any add-on
 ---
+u_name: Auto Address Cleaner
+u_id: {b65d0be3-cc20-44e1-bbaa-ea394dbffa34}
+r_name: Auto Address Cleaner T
+r_link: https://addons.thunderbird.net/addon/auto-address-cleaner-t/
+r_id: AutoAddressCleaner-T@Toshi_
+---
 u_name: Correct Identity
 u_id: {47ef7cc0-2201-11da-8cd6-0800200c9a66}
 r_name: Identity Chooser
