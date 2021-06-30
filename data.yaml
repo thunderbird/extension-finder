@@ -58,3 +58,9 @@ u_id: lightningbutton@rsjtdrjgfuzkfg.com
 r_name: Native calendar toolbar icons
 r_link: https://support.mozilla.org/en-US/kb/how-customize-toolbars
 r_desc: <p>Lightning is now built into Thunderbird and already contains most toolbar buttons that were previously provided by this add-on. You can add them by customizing the toolbar, without installing any add-on.</p>
+---
+u_name: Nextcloud for Filelink
+u_id: owncloud@viguierjust.com
+r_name: *cloud - FileLink for Nextcloud and ownCloud
+r_link: https://addons.thunderbird.net/addon/filelink-nextcloud-owncloud
+r_id: cloud@johannes-endres.de
