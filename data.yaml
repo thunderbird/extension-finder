@@ -11,11 +11,11 @@ r_name: Identity Chooser
 r_link: https://addons.thunderbird.net/addon/identity-chooser/
 r_id: identitychooser@janek.org
 ---
-u_name: Get All Mail Button
-u_id: {0D4D76B0-657A-41b0-B3ED-60C638F4D97D}
-r_name: Get All Mail Button for TB78++
-r_link: https://addons.thunderbird.net/addon/get-all-mail-button-for-tb78/
-r_id: gamb@pharqcon.com
+u_name: gContactSync
+u_id: gContactSync@pirules.net
+r_name: Thunderbird native CardDAV support
+r_link: https://support.mozilla.org/en-US/questions/1321916
+r_desc: <p>Thunderbird has integrated CardDAV support since Beta 85, with which Google address books can also be connected. However, Google does not support all CardDAV specifications and therefore not all Google features are available, for example groups.</p>
 ---
 u_name: gContactSync
 u_id: gContactSync@pirules.net
@@ -29,29 +29,11 @@ r_name: CardBook
 r_link: https://addons.thunderbird.net/addon/cardbook/
 r_id: cardbook@vigneau.philippe
 ---
-u_name: gContactSync
-u_id: gContactSync@pirules.net
-r_name: Thunderbird native CardDAV support
-r_link: https://support.mozilla.org/en-US/questions/1321916
-r_desc: <p>Thunderbird has integrated CardDAV support since Beta 85, with which Google address books can also be connected. However, Google does not support all CardDAV specifications and therefore not all Google features are available, for example groups.</p>
----
-u_name: MinimizeToTray Reanimated
-u_id: mintray-reanimated@ysard
-r_name: Native tray support or third-party application
-r_link: https://support.mozilla.org/en-US/kb/new-thunderbird-78#w_minimize-to-tray-support-added-for-windows
-r_desc: <p>Thunderbird 78 introduced system tray support on Windows. Use the preferences to enable Thunderbird to minimize into the system tray. If you want to also minimize Thunderbird on close, additionally install an add-on like <a href="https://addons.thunderbird.net/addon/minimize-on-close/">Minimize on Close</a>.</p><p>For platforms other than Windows, third-party applications like <a href="https://github.com/user-none/KDocker">KDocker</a> (Linux) can provide a similar functionality.</p>
----
-u_name: MinimizeToTray revived
-u_id: mintrayr@tn123.ath.cx
-r_name: Native tray support or third-party application
-r_link: https://support.mozilla.org/en-US/kb/new-thunderbird-78#w_minimize-to-tray-support-added-for-windows
-r_desc: <p>Thunderbird 78 introduced system tray support on Windows. Use the preferences to enable Thunderbird to minimize into the system tray. If you want to also minimize Thunderbird on close, additionally install an add-on like <a href="https://addons.thunderbird.net/addon/minimize-on-close/">Minimize on Close</a>.</p><p>For other platforms, third-party applications like <a href="https://github.com/user-none/KDocker">KDocker</a> (Linux) can provide a similar functionality.</p>
----
-u_name: ThunderBirthDay
-u_id: {4C9FE6FE-2C83-11DC-90B4-DC8456D89593}
-r_name: Birthday Calendar
-r_link: https://addons.thunderbird.net/addon/birthday-calendar/
-r_id: birthdaycalendar@rsjtdrjgfuzkfg.com
+u_name: Get All Mail Button
+u_id: {0D4D76B0-657A-41b0-B3ED-60C638F4D97D}
+r_name: Get All Mail Button for TB78++
+r_link: https://addons.thunderbird.net/addon/get-all-mail-button-for-tb78/
+r_id: gamb@pharqcon.com
 ---
 u_name: LightningButton
 u_id: lightningbutton@rsjtdrjgfuzkfg.com
@@ -59,8 +41,26 @@ r_name: Native calendar toolbar icons
 r_link: https://support.mozilla.org/en-US/kb/how-customize-toolbars
 r_desc: <p>Lightning is now built into Thunderbird and already contains most toolbar buttons that were previously provided by this add-on. You can add them by customizing the toolbar, without installing any add-on.</p>
 ---
+u_name: MinimizeToTray revived
+u_id: mintrayr@tn123.ath.cx
+r_name: Native tray support or third-party application
+r_link: https://support.mozilla.org/en-US/kb/new-thunderbird-78#w_minimize-to-tray-support-added-for-windows
+r_desc: <p>Thunderbird 78 introduced system tray support on Windows. Use the preferences to enable Thunderbird to minimize into the system tray. If you want to also minimize Thunderbird on close, additionally install an add-on like <a href="https://addons.thunderbird.net/addon/minimize-on-close/">Minimize on Close</a>.</p><p>For other platforms, third-party applications like <a href="https://github.com/user-none/KDocker">KDocker</a> (Linux) can provide a similar functionality.</p>
+---
+u_name: MinimizeToTray Reanimated
+u_id: mintray-reanimated@ysard
+r_name: Native tray support or third-party application
+r_link: https://support.mozilla.org/en-US/kb/new-thunderbird-78#w_minimize-to-tray-support-added-for-windows
+r_desc: <p>Thunderbird 78 introduced system tray support on Windows. Use the preferences to enable Thunderbird to minimize into the system tray. If you want to also minimize Thunderbird on close, additionally install an add-on like <a href="https://addons.thunderbird.net/addon/minimize-on-close/">Minimize on Close</a>.</p><p>For platforms other than Windows, third-party applications like <a href="https://github.com/user-none/KDocker">KDocker</a> (Linux) can provide a similar functionality.</p>
+---
 u_name: Nextcloud for Filelink
 u_id: owncloud@viguierjust.com
 r_name: *cloud - FileLink for Nextcloud and ownCloud
 r_link: https://addons.thunderbird.net/addon/filelink-nextcloud-owncloud
 r_id: cloud@johannes-endres.de
+---
+u_name: ThunderBirthDay
+u_id: {4C9FE6FE-2C83-11DC-90B4-DC8456D89593}
+r_name: Birthday Calendar
+r_link: https://addons.thunderbird.net/addon/birthday-calendar/
+r_id: birthdaycalendar@rsjtdrjgfuzkfg.com
