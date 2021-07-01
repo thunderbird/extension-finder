@@ -183,11 +183,13 @@ function addonResult(result) {
     
     let authorEl = $('.alt-author');
     let iconEl = $('.icon');
-    
+    let descEl = $('.alt-desc');
+
     getAddonData(result.suggested.id)
     .then(data => {
       authorEl.textContent = data.authors.map(a => a.name).join(', ');
       iconEl.src = data.icon_url;
+      descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
     }).catch(console.error);
   });
 }
