@@ -189,7 +189,9 @@ function addonResult(result) {
     .then(data => {
       authorEl.textContent = data.authors.map(a => a.name).join(', ');
       iconEl.src = data.icon_url;
-      descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
+      if (data.summary["en-US"]) {
+        descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
+      }
     }).catch(console.error);
   });
 }
