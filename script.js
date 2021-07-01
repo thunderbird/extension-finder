@@ -76,21 +76,24 @@ function buildIndex(data) {
   b.ref('idx'); // unique index reference
 
   let addons = {};
+  let addonsById = {};
   
   data.forEach(e => { // google sheets will need in data.feed.entry
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
+    addonsById[record.id.toLowerCase()] = record.name;
   });
   
   let idx = b.build();
   console.log({idx, addons})
-  return { idx, addons };  
+  return { idx, addons, addonsById };  
 }
 
 function process(entry) {
   let obj = {
     idx: entry["r_name"],
+    id: entry["u_id"],
     name: entry["u_name"],
     suggested: {
       name: entry["r_name"],
@@ -102,7 +105,7 @@ function process(entry) {
   return obj;
 }
 
-function init({ idx, addons }) {
+function init({ idx, addons, addonsById }) {
   let input = $('input');
   let outEl = $('.out');
   let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
@@ -134,8 +137,12 @@ function init({ idx, addons }) {
   input.disabled = false;
   
   let loc = new URL(window.location);
-  
-  let query = loc.searchParams.get('q') || input.value;
+  let q = loc.searchParams.get("q");
+  let id = loc.searchParams.get("id");
+  if (id && addonsById.hasOwnProperty(id.toLowerCase())) {
+    q = addonsById[id.toLowerCase()];
+  }  
+  let query = q || input.value;
   
   if (query) {
     input.value = query;
