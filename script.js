@@ -138,7 +138,10 @@ function init({ idx, addons, addonsById }) {
   
   let loc = new URL(window.location);
   let q = loc.searchParams.get("q");
+  if (q) q = decodeURIComponent(q);
   let id = loc.searchParams.get("id");
+  if (id) id = decodeURIComponent(id);
+
   if (id && addonsById.hasOwnProperty(id.toLowerCase())) {
     q = addonsById[id.toLowerCase()];
   }  
