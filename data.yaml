@@ -88,3 +88,10 @@ u_id: {4C9FE6FE-2C83-11DC-90B4-DC8456D89593}
 r_name: Birthday Calendar
 r_link: https://addons.thunderbird.net/addon/birthday-calendar/
 r_id: birthdaycalendar@rsjtdrjgfuzkfg.com
+---
+u_name: Autoarchive
+u_id: {b3a22f77-26b5-43d1-bd2f-9337488eacef}
+r_name: AutoarchiveReloaded
+r_link: https://addons.thunderbird.net/en-US/thunderbird/addon/autoarchivereloaded/
+r_id: AutoarchiveReloaded@brummolix.addons.mozilla.org
+
