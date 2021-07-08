@@ -83,6 +83,12 @@ r_name: Remove Duplicate Messages (alternative)
 r_link: https://addons.thunderbird.net/addon/removedupes/
 r_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
 ---
+u_name: Select Inbox
+u_id: {6737729A-DEFD-45c8-ADA4-971812369E11}
+r_name: Select Inbox On Startup
+r_link: https://addons.thunderbird.net/addon/select-inbox-on-startup/
+r_id: SelectInbox@jobisoft.de
+---
 u_name: ThunderBirthDay
 u_id: {4C9FE6FE-2C83-11DC-90B4-DC8456D89593}
 r_name: Birthday Calendar
