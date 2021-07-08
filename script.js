@@ -78,7 +78,7 @@ function buildIndex(data) {
   let addons = {};
   let addonsById = {};
   
-  data.forEach(e => { // google sheets will need in data.feed.entry
+  data.forEach(e => { // google sheets will need data.feed.entry.forEach
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
@@ -92,7 +92,7 @@ function buildIndex(data) {
 
 function process(entry) {
   let obj = {
-    idx: entry["r_name"],
+    idx: `${entry["u_id"]}:${entry["r_name"]}`,
     id: entry["u_id"],
     name: entry["u_name"],
     suggested: {
