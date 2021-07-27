@@ -94,4 +94,22 @@ u_id: {b3a22f77-26b5-43d1-bd2f-9337488eacef}
 r_name: AutoarchiveReloaded
 r_link: https://addons.thunderbird.net/en-US/thunderbird/addon/autoarchivereloaded/
 r_id: AutoarchiveReloaded@brummolix.addons.mozilla.org
+---
+u_name: Quote Colors
+u_id: {B274D460-4DF9-454c-AC69-CA71398D7498}
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
+---
+u_name: New QuoteColors
+u_id: quotecolor-moz@librefox.org
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
+---
+u_name: QuoteCollapse
+u_id: {0b62b504-857c-4f62-a336-2e8425bd5738}
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
 
