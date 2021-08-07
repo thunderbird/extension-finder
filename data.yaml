@@ -112,4 +112,9 @@ u_id: {0b62b504-857c-4f62-a336-2e8425bd5738}
 r_name: Quote Colors & Collapse
 r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
-
+---
+u_name: Grammar Checker
+u_id: grammarchecker@codedgers.com
+r_name: Grammar and Spell Checker — LanguageTool
+r_link: https://addons.thunderbird.net/thunderbird/addon/grammar-and-spell-checker/
+r_id: languagetool-mailextension@languagetool.org
