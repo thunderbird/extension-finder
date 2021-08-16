@@ -53,6 +53,12 @@ r_name: Get All Mail Button for TB78++
 r_link: https://addons.thunderbird.net/addon/get-all-mail-button-for-tb78/
 r_id: gamb@pharqcon.com
 ---
+u_name: Grammar Checker
+u_id: grammarchecker@codedgers.com
+r_name: Grammar and Spell Checker — LanguageTool
+r_link: https://addons.thunderbird.net/thunderbird/addon/grammar-and-spell-checker/
+r_id: languagetool-mailextension@languagetool.org
+---
 u_name: Hide Local Folders
 u_id: hide-local-folders@alexcabal.com
 r_name: Hide Local Folders for TB78++
