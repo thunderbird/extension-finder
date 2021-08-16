@@ -11,6 +11,12 @@ r_name: Auto Address Cleaner T
 r_link: https://addons.thunderbird.net/addon/auto-address-cleaner-t/
 r_id: AutoAddressCleaner-T@Toshi_
 ---
+u_name: Autoarchive
+u_id: {b3a22f77-26b5-43d1-bd2f-9337488eacef}
+r_name: AutoarchiveReloaded
+r_link: https://addons.thunderbird.net/en-US/thunderbird/addon/autoarchivereloaded/
+r_id: AutoarchiveReloaded@brummolix.addons.mozilla.org
+---
 u_name: Correct Identity
 u_id: {47ef7cc0-2201-11da-8cd6-0800200c9a66}
 r_name: Identity Chooser
@@ -47,6 +53,12 @@ r_name: Get All Mail Button for TB78++
 r_link: https://addons.thunderbird.net/addon/get-all-mail-button-for-tb78/
 r_id: gamb@pharqcon.com
 ---
+u_name: Hide Local Folders
+u_id: hide-local-folders@alexcabal.com
+r_name: Hide Local Folders for TB78++
+r_link: https://addons.thunderbird.net/en-US/thunderbird/addon/hide-local-folders-for-tb78/
+r_id: hlf@pharqcon.com
+---
 u_name: LightningButton
 u_id: lightningbutton@rsjtdrjgfuzkfg.com
 r_name: Native calendar toolbar icons
@@ -71,15 +83,39 @@ r_name: *cloud - FileLink for Nextcloud and ownCloud
 r_link: https://addons.thunderbird.net/addon/filelink-nextcloud-owncloud
 r_id: cloud@johannes-endres.de
 ---
+u_name: New QuoteColors
+u_id: quotecolor-moz@librefox.org
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
+---
+u_name: Nostalgy
+u_id: nostalgy@alain.frisch
+r_name: Manage and archive emails/Nostalgy++
+r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/nostalgy_ng/
+r_id: nostalgy@opto.one
+---
+u_name: Quote Colors
+u_id: {B274D460-4DF9-454c-AC69-CA71398D7498}
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
+---
+u_name: QuoteCollapse
+u_id: {0b62b504-857c-4f62-a336-2e8425bd5738}
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
+---
 u_name: Remove Duplicate Messages
 u_id: {12345678-1234-1234-1234-123456789abc}
-r_name: Remove Duplicate Messages (TB 78+)
+r_name: Remove Duplicate Messages (alternative)
 r_link: https://addons.thunderbird.net/addon/removedupes/
 r_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
 ---
 u_name: Remove Duplicates
 u_id: removedupes@dillinger
-r_name: Remove Duplicate Messages (TB 78+)
+r_name: Remove Duplicate Messages (alternative)
 r_link: https://addons.thunderbird.net/addon/removedupes/
 r_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
 ---
@@ -89,20 +125,26 @@ r_name: Birthday Calendar
 r_link: https://addons.thunderbird.net/addon/birthday-calendar/
 r_id: birthdaycalendar@rsjtdrjgfuzkfg.com
 ---
-#u_name: GlodaQuilla search indexing enhancements 
-#u_id: glodaquilla@mesquilla.com
-#r_name: Glodaquilla-NG: Email onDisk Status, Search/Index
-#r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/glodaquilla-ng-index-ondisk/
-#r_id: glodaquilla-ng@opto.one
+u_name: Toggle Quotes
+u_id: quotes@dillinger
+r_name: Quote Colors & Collapse
+r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_id: quotecolors@thunderbird-mail.de
 ---
-#u_name: Expression Search
-#u_id: {03EF8A6E-C972-488f-92FA-98ABC2C9F8B9}
-#r_name: Expression Search - NG
-#r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/expression-search-ng/
-#r_id: expressionsearch@opto.one
+u_name: GlodaQuilla search indexing enhancements 
+u_id: glodaquilla@mesquilla.com
+r_name: Glodaquilla-NG: Email onDisk Status, Search/Index
+r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/glodaquilla-ng-index-ondisk/
+r_id: glodaquilla-ng@opto.one
 ---
-#u_name: Slideshow
-#u_id: slideshowski@totic.org
-#r_name: Attachment Image Viewer/Slideshow
-#r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/attachment-image-viewer/
-#r_id: imageview@opto.one
+u_name: Expression Search
+u_id: {03EF8A6E-C972-488f-92FA-98ABC2C9F8B9}
+r_name: Expression Search - NG
+r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/expression-search-ng/
+r_id: expressionsearch@opto.one
+---
+u_name: Slideshow
+u_id: slideshowski@totic.org
+r_name: Attachment Image Viewer/Slideshow
+r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/attachment-image-viewer/
+r_id: imageview@opto.one
