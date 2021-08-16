@@ -124,3 +124,9 @@ u_id: quotes@dillinger
 r_name: Quote Colors & Collapse
 r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
+---
+u_name: Nostalgy
+u_id: nostalgy@alain.frisch
+r_name: Manage and archive emails/Nostalgy++
+r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/nostalgy_ng/
+r_id: nostalgy@opto.one
