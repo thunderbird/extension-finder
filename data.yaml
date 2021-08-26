@@ -29,6 +29,12 @@ r_link: https://addons.thunderbird.net/addon/edit-email-subject/
 r_id: EditMailSubject@jcp.convenant
 r_name: Edit email Subject (EES)
 ---
+u_name: Enigmail
+u_id: {847b3a00-7ab1-11d4-8f02-006008948af5}
+r_name: Thunderbird native OpenPGP support
+r_link: https://support.mozilla.org/en-US/kb/openpgp-thunderbird-howto-and-faq
+r_desc: <p>Thunderbird has integrated OpenPGP support since Thunderbird 78. The Enigmail add-on was only used to migrate keys in Thunderbird 78 and was completely decommissioned in Thunderbird 91.</p>
+---
 u_name: gContactSync
 u_id: gContactSync@pirules.net
 r_name: Thunderbird native CardDAV support
