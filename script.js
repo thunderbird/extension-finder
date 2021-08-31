@@ -110,10 +110,12 @@ async function init({ idx, addons, addonsById }) {
   let input = $('#searchInput');
   let outEl = $('.out');
   let exactmatch = $('#exactMatch');
+  let replacementsListIntro = $('#replacementsListIntro');
 
   let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
 
   function search(query) {
+    replacementsListIntro.hidden = true;
     // Show help about updating add-ons instead of searching for results.
     if (query && transmitted_id_name && query == transmitted_id_name) {
       outEl.innerHTML = '';
@@ -132,7 +134,8 @@ async function init({ idx, addons, addonsById }) {
         let words = query.split(" ").map(word => word.toLowerCase());
         out = out.filter(f => words.every(word => f.name.toLowerCase().includes(word)));
       }
-    } else {
+    } else {      
+      replacementsListIntro.hidden = false;
       out = allAddons;
     }
 
