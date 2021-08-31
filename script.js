@@ -11,6 +11,9 @@
 // Assume current ESR as current version, if it could not be extracted from user agent.
 var gUsedVersion = 91;
 
+// Define how old the latest version of an add-on may be, before it is considered unmaintained.
+const maintainedSpan = 365*24*60*60*1000; // Year
+
 async function dataToJSON(data) {
   let entries = [];
 
@@ -53,7 +56,8 @@ const templates = {
     addon: $('#search-result-addon'),
     general: $('#search-result-general'),
     empty: $('#search-result-empty'),
-    compat: $('#search-result-compat')
+    compat: $('#search-result-compat'),
+    notyetcompat: $('#search-result-notyetcompat')
   }
 }
 
@@ -109,25 +113,41 @@ function process(entry) {
 
 async function init({ idx, addons, addonsById }) {
   let input = $('#searchInput');
+  input.setAttribute('placeholder', 'name of unmaintained extension');
+
   let outEl = $('.out');
   let exactmatch = $('#exactMatch');
   let replacementsListIntro = $('#replacementsListIntro');
-
-  // Extract used version from user agent.
-  let userAgent = navigator.userAgent.split(" ").pop();
-  if (userAgent.startsWith("Thunderbird")) {
-    gUsedVersion = userAgent.split("/").pop().split(".")[0];
-  }
 
   let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
 
   function search(query) {
     replacementsListIntro.hidden = true;
+
     // Show help about updating add-ons instead of searching for results.
-    if (query && transmitted_id_name && query == transmitted_id_name) {
-      outEl.innerHTML = '';
-      outEl.appendChild(compatResult(query, addon));
-      return;
+    if (query && transmitted_addon_name && query == transmitted_addon_name) {
+      // transmitted_addon_name is set, 
+      // - if this has been called from Thunderbird,
+      // - if we do not have a database entry for the requested add-on
+
+      // Is it compatible and therefore this call a caching issue?
+      let compat = addon?.current_version?.compatibility?.thunderbird;
+      if (
+        compat &&
+        (!compat.max || compat.max == "*" || parseInt(compat.max.toString().split(".")[0], 10) >= gUsedVersion)
+      ) {
+        outEl.innerHTML = '';
+        outEl.appendChild(maintainedResult(query, addon, true));
+        return;
+      }
+
+      // Is it still maintained?
+      let files = addon?.current_version?.files;
+      if (files.length > 0 && (new Date() - new Date(files[0].created)) < maintainedSpan) {
+        outEl.innerHTML = '';
+        outEl.appendChild(maintainedResult(query, addon, false));
+        return;
+      }
     }
 
     let results, out;
@@ -155,55 +175,51 @@ async function init({ idx, addons, addonsById }) {
     }
   }
 
+  let loc = new URL(window.location);
+  let query = loc.searchParams.get("q");
+  if (query) query = decodeURIComponent(query);
+
+  let addon = null;
+  let transmitted_addon_name = null;
+
+  // Extract used version from user agent.
+  let userAgent = navigator.userAgent.split(" ").pop();
+  if (userAgent.startsWith("Thunderbird")) {
+      gUsedVersion = userAgent.split("/").pop().split(".")[0];
+
+      let id = loc.searchParams.get("id");
+      if (id) {
+        id = decodeURIComponent(id);
+        exactmatch.checked = true;
+    
+        if (addonsById.hasOwnProperty(id.toLowerCase())) {
+          // Alter the entered name to match the stored add-on name associated with that ID.
+          query = addonsById[id.toLowerCase()];
+        } else {
+          // Not in our database, try to flip to a name provided by ATN.
+          addon = await getAddonData(id);
+          if (addon && addon.name) {
+            query = addon.name["en-US"] ? addon.name["en-US"] : Object.values(addon.name)[0];
+          }
+          // Store the used name, so search can fallback to the advanced information
+          // available for the linked addon.
+          transmitted_addon_name = query;
+        }
+      }      
+  }
+  
+  
+
+
   input.addEventListener('input', function (e) {
-    let query = input.value.trim();
-    search(query);
+    search(input.value.trim());
   }, { passive: true });
 
   exactmatch.addEventListener('input', function (e) {
-    let query = input.value.trim();
-    search(query);
+    search(input.value.trim());
   }, { passive: true });
 
-  input.setAttribute('placeholder', 'name of unmaintained extension');
   input.disabled = false;
-
-  let loc = new URL(window.location);
-  let q = loc.searchParams.get("q");
-  if (q) q = decodeURIComponent(q);
-
-  let id = loc.searchParams.get("id");
-  let addon = null;
-  let transmitted_id_name = null;
-
-  if (id) {
-    id = decodeURIComponent(id);
-    exactmatch.checked = true;
-
-
-    if (addonsById.hasOwnProperty(id.toLowerCase())) {
-      // Alter the entered name to match the add-on name associated with that ID.
-      q = addonsById[id.toLowerCase()];
-    } else {
-      // Not in our database, try to flip to en-US and do compat check.
-      addon = await getAddonData(id);
-      if (addon && addon.name && addon.name["en-US"]) {
-        q = addon.name["en-US"];
-      }
-      // If the add-on seems to be compatible with the used version, store the
-      // transmitted name, which will cause search() to display a help text instead
-      // of doing a search, when the transmitted name is used as query.
-      let compat = addon?.current_version?.compatibility?.thunderbird;
-      if (
-        compat &&
-        (!compat.max || compat.max == "*" || parseInt(compat.max.toString().split(".")[0], 10) >= gUsedVersion)
-      ) {
-        transmitted_id_name = q;
-      }
-    }
-  }
-
-  let query = q || input.value;
 
   if (query) {
     input.value = query;
@@ -276,8 +292,16 @@ function emptyResult(query) {
   });
 }
 
-function compatResult(query, addon) {
-  return stamp(templates.results.compat, $ => {
+function maintainedResult(query, addon, isCompatible) {
+  if (isCompatible) {
+    return stamp(templates.results.compat, $ => {
+      $('.query').textContent = query;
+      $('.usedVersion').textContent = gUsedVersion;
+      $('.button').href = addon.current_version.url;
+    });
+  }
+
+  return stamp(templates.results.notyetcompat, $ => {
     $('.query').textContent = query;
     $('.usedVersion').textContent = gUsedVersion;
     $('.button').href = addon.current_version.url;
