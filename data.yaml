@@ -145,7 +145,6 @@ r_id: quotecolors@thunderbird-mail.de
 ---
 u_name: X-Unsent support
 u_id: X-Unsent_support@pl
-r_name: Native support or X-Unsent
+r_name: Native support for X-Unsent
 r_link: https://bugzilla.mozilla.org/show_bug.cgi?id=166541#c77
-r_desc: <p>The functionality of this add-on has been added to Thunderbird 91. E-mail messages (*.eml) with a "X-Unsent: 1" header are opened with the composer in edit mode.</p>
-
+r_desc: <p>The functionality of this add-on has been added to Thunderbird 91. E-mail messages (*.eml) with an "X-Unsent: 1" header are now opened with the composer for direct editing.</p>
