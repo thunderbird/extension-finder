@@ -8,7 +8,8 @@
 // const R_NAME_FIELD = "r_name"; //.gsx$webextensionreplacement.$t,
 // const R_LINK_FIELD = "r_link"; //.gsx$url.$t
 
-const ESR = 91;
+// Assume current ESR as current version, if it could not be extracted from user agent.
+var gUsedVersion = 91;
 
 async function dataToJSON(data) {
   let entries = [];
@@ -112,6 +113,12 @@ async function init({ idx, addons, addonsById }) {
   let exactmatch = $('#exactMatch');
   let replacementsListIntro = $('#replacementsListIntro');
 
+  // Extract used version from user agent.
+  let userAgent = navigator.userAgent.split(" ").pop();
+  if (userAgent.startsWith("Thunderbird")) {
+    gUsedVersion = userAgent.split("/").pop().split(".")[0];
+  }
+
   let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
 
   function search(query) {
@@ -183,13 +190,13 @@ async function init({ idx, addons, addonsById }) {
       if (addon && addon.name && addon.name["en-US"]) {
         q = addon.name["en-US"];
       }
-      // If the add-on seems to be compatible with ESR, store the transmitted name, which
-      // will cause search() to display a help text instead of doing a search, when the
-      // transmitted name is used as query.
+      // If the add-on seems to be compatible with the used version, store the
+      // transmitted name, which will cause search() to display a help text instead
+      // of doing a search, when the transmitted name is used as query.
       let compat = addon?.current_version?.compatibility?.thunderbird;
       if (
         compat &&
-        (!compat.max || compat.max == "*" || parseInt(compat.max.toString().split(".")[0], 10) >= ESR)
+        (!compat.max || compat.max == "*" || parseInt(compat.max.toString().split(".")[0], 10) >= gUsedVersion)
       ) {
         transmitted_id_name = q;
       }
@@ -265,14 +272,14 @@ function generalResult(result) {
 function emptyResult(query) {
   return stamp(templates.results.empty, $ => {
     $('.query').textContent = query;
-    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=${ESR}.0`;
+    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=${gUsedVersion}.0`;
   });
 }
 
 function compatResult(query, addon) {
   return stamp(templates.results.compat, $ => {
     $('.query').textContent = query;
-    $('.esr').textContent = ESR;
+    $('.usedVersion').textContent = gUsedVersion;
     $('.button').href = addon.current_version.url;
   });
 }
