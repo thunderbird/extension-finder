@@ -127,7 +127,7 @@ a.button:hover {
 
 .noresults {
   text-align: center;
-  padding: 2rem 0 3rem;
+  padding: 2rem 2rem 3rem 2rem;
 }
 
 a:link {
@@ -139,7 +139,7 @@ a:link {
 }
 
 .help {
-  margin: 2rem 4rem 0 4rem;
+  margin: 2rem 2rem 0 2rem;
 }
 .help p {
   text-align: justify; 
@@ -147,6 +147,7 @@ a:link {
 
 .help img {
   border: 2px solid grey;
+  margin-top: 1rem;
 }
 
 @media screen and (max-width: 500px) {
