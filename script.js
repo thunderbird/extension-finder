@@ -127,6 +127,10 @@ async function init({ idx, addons, addonsById }) {
       out = results.map(r => addons[r.ref]);
       if (exactmatch.checked) {
         out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
+      } else {
+        // We do request that each of the entered words is part of the name.
+        let words = query.split(" ").map(word => word.toLowerCase());
+        out = out.filter(f => words.every(word => f.name.toLowerCase().includes(word)));
       }
     } else {
       out = allAddons;
