@@ -86,7 +86,6 @@ function buildIndex(data) {
   });
   
   let idx = b.build();
-  console.log({idx, addons})
   return { idx, addons, addonsById };  
 }
 
@@ -105,9 +104,11 @@ function process(entry) {
   return obj;
 }
 
-function init({ idx, addons, addonsById }) {
-  let input = $('input');
+async function init({ idx, addons, addonsById }) {
+  let input = $('#searchInput');
   let outEl = $('.out');
+  let exactmatch = $('#exactMatch');
+
   let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
   
   function search(query) {
@@ -115,6 +116,9 @@ function init({ idx, addons, addonsById }) {
     if (query) {
       results = idx.search('*' + query + '*');
       out = results.map(r => addons[r.ref]);
+      if (exactmatch.checked) {
+        out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
+      }
     } else {
       out = allAddons;
     }
@@ -133,18 +137,35 @@ function init({ idx, addons, addonsById }) {
     search(query);
   }, { passive: true });
   
+  exactmatch.addEventListener('input', function (e) {
+    let query = input.value.trim();
+    search(query);
+  }, { passive: true });
+
   input.setAttribute('placeholder', 'name of unmaintained extension');
   input.disabled = false;
   
   let loc = new URL(window.location);
   let q = loc.searchParams.get("q");
   if (q) q = decodeURIComponent(q);
+  
   let id = loc.searchParams.get("id");
-  if (id) id = decodeURIComponent(id);
+  if (id) {
+    id = decodeURIComponent(id);
+    exactmatch.checked = true;
+    
+    
+    if (addonsById.hasOwnProperty(id.toLowerCase())) {
+      // Alter the entered name to match the add-on name associated with that ID.
+      q = addonsById[id.toLowerCase()];
+    } else {
+      //let addon = await getAddonData(id);
+      //if (addon && addon.name && addon.name["en-US"]) {
+      //  q = addon.name["en-US"];
+      //}
+    }
+  }
 
-  if (id && addonsById.hasOwnProperty(id.toLowerCase())) {
-    q = addonsById[id.toLowerCase()];
-  }  
   let query = q || input.value;
   
   if (query) {
@@ -214,7 +235,7 @@ function generalResult(result) {
 function emptyResult(query) {
   return stamp(templates.results.empty, $=> {
     $('.query').textContent = query;
-    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=78.0`;
+    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=91.0`;
   });
 }
 
