@@ -138,6 +138,17 @@ a:link {
   grid-column: span 2;
 }
 
+.help {
+  margin: 2rem 4rem 0 4rem;
+}
+.help p {
+  text-align: justify; 
+}
+
+.help img {
+  border: 2px solid grey;
+}
+
 @media screen and (max-width: 500px) {
   body {
     font-size: 12px;

@@ -64,6 +64,19 @@
             <a class="button">search addons.thunderbird.net ➡</a>
           </li>
         </template>
+        <template id="search-result-compat">
+          <li class="noresults">
+            <h2>
+              The add-on &ldquo;<span class="query"></span>&rdquo; seems to be compatible with Thunderbird <span class="esr"></span>.
+            </h2>
+            <a class="button">Show Add-on</a>
+            <div class="help">
+              <p>Directly after upgrading Thunderbird, the displayed information in the add-on manager could be outdated or the automatic update check could have failed due to a connection timeout to addons.thunderbird.net.</p>             
+              <p>Please search for add-on updates manually, using the gear menu in the add-on manager as shown below, and/or restart Thunderbird.</p>
+              <img src="update-addons.png"/>
+            </div>
+          </li>
+        </template>
       </ul>
     </section>
     <script src="lunr.min.js"></script>

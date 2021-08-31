@@ -8,18 +8,19 @@
 // const R_NAME_FIELD = "r_name"; //.gsx$webextensionreplacement.$t,
 // const R_LINK_FIELD = "r_link"; //.gsx$url.$t
 
+const ESR = 91;
+
 async function dataToJSON(data) {
   let entries = [];
-  
+
   let lines = data.split(/\r\n|\n/);
   let i = 0;
 
-  do
-   {
+  do {
     let entry = {};
     while (i < lines.length) {
       i++;
-      let line = lines[i-1].trim();
+      let line = lines[i - 1].trim();
 
       // End of Block
       if (line.startsWith("---")) {
@@ -42,7 +43,7 @@ async function dataToJSON(data) {
       entries.push(entry);
     }
   } while (i < lines.length);
-  
+
   return entries;
 }
 
@@ -50,7 +51,8 @@ const templates = {
   results: {
     addon: $('#search-result-addon'),
     general: $('#search-result-general'),
-    empty: $('#search-result-empty')
+    empty: $('#search-result-empty'),
+    compat: $('#search-result-compat')
   }
 }
 
@@ -60,7 +62,7 @@ function stamp(template, cb) {
   return el;
 }
 
-function $(selector, parent=document) {
+function $(selector, parent = document) {
   return parent.querySelector(selector);
 }
 
@@ -71,22 +73,22 @@ async function loadData() {
 
 function buildIndex(data) {
   let b = new lunr.Builder();
-  
+
   b.field('name'); //search field
   b.ref('idx'); // unique index reference
 
   let addons = {};
   let addonsById = {};
-  
+
   data.forEach(e => { // google sheets will need data.feed.entry.forEach
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
     addonsById[record.id.toLowerCase()] = record.name;
   });
-  
+
   let idx = b.build();
-  return { idx, addons, addonsById };  
+  return { idx, addons, addonsById };
 }
 
 function process(entry) {
@@ -110,8 +112,15 @@ async function init({ idx, addons, addonsById }) {
   let exactmatch = $('#exactMatch');
 
   let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
-  
+
   function search(query) {
+    // Show help about updating add-ons instead of searching for results.
+    if (query && transmitted_id_name && query == transmitted_id_name) {
+      outEl.innerHTML = '';
+      outEl.appendChild(compatResult(query, addon));
+      return;
+    }
+
     let results, out;
     if (query) {
       results = idx.search('*' + query + '*');
@@ -122,21 +131,21 @@ async function init({ idx, addons, addonsById }) {
     } else {
       out = allAddons;
     }
-    
+
     outEl.innerHTML = '';
-    
+
     if (out.length) {
       out.forEach(r => outEl.appendChild(resultRow(r)));
     } else {
       outEl.appendChild(emptyResult(query));
     }
   }
-    
+
   input.addEventListener('input', function (e) {
     let query = input.value.trim();
     search(query);
   }, { passive: true });
-  
+
   exactmatch.addEventListener('input', function (e) {
     let query = input.value.trim();
     search(query);
@@ -144,37 +153,51 @@ async function init({ idx, addons, addonsById }) {
 
   input.setAttribute('placeholder', 'name of unmaintained extension');
   input.disabled = false;
-  
+
   let loc = new URL(window.location);
   let q = loc.searchParams.get("q");
   if (q) q = decodeURIComponent(q);
-  
+
   let id = loc.searchParams.get("id");
+  let addon = null;
+  let transmitted_id_name = null;
+
   if (id) {
     id = decodeURIComponent(id);
     exactmatch.checked = true;
-    
-    
+
+
     if (addonsById.hasOwnProperty(id.toLowerCase())) {
       // Alter the entered name to match the add-on name associated with that ID.
       q = addonsById[id.toLowerCase()];
     } else {
-      //let addon = await getAddonData(id);
-      //if (addon && addon.name && addon.name["en-US"]) {
-      //  q = addon.name["en-US"];
-      //}
+      // Not in our database, try to flip to en-US and do compat check.
+      addon = await getAddonData(id);
+      if (addon && addon.name && addon.name["en-US"]) {
+        q = addon.name["en-US"];
+      }
+      // If the add-on seems to be compatible with ESR, store the transmitted name, which
+      // will cause search() to display a help text instead of doing a search, when the
+      // transmitted name is used as query.
+      let compat = addon?.current_version?.compatibility?.thunderbird;
+      if (
+        compat &&
+        (!compat.max || compat.max == "*" || parseInt(compat.max.toString().split(".")[0], 10) >= ESR)
+      ) {
+        transmitted_id_name = q;
+      }
     }
   }
 
   let query = q || input.value;
-  
+
   if (query) {
     input.value = query;
     search(query);
   } else {
     search();
   }
-  
+
   input.focus();
 }
 
@@ -204,19 +227,19 @@ function addonResult(result) {
     $('.legacy-name').textContent = result.name;
     $('.alt-name').textContent = result.suggested.name;
     $('.cta .button').setAttribute('href', result.suggested.url);
-    
+
     let authorEl = $('.alt-author');
     let iconEl = $('.icon');
     let descEl = $('.alt-desc');
 
     getAddonData(result.suggested.id)
-    .then(data => {
-      authorEl.textContent = data.authors.map(a => a.name).join(', ');
-      iconEl.src = data.icon_url;
-      if (data.summary["en-US"]) {
-        descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
-      }
-    }).catch(console.error);
+      .then(data => {
+        authorEl.textContent = data.authors.map(a => a.name).join(', ');
+        iconEl.src = data.icon_url;
+        if (data.summary["en-US"]) {
+          descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
+        }
+      }).catch(console.error);
   });
 }
 
@@ -224,7 +247,7 @@ function generalResult(result) {
   return stamp(templates.results.general, $ => {
     $('.legacy-name').textContent = result.name;
     $('.alt-name').textContent = result.suggested.name;
-    $('.cta .button').setAttribute('href', result.suggested.url);    
+    $('.cta .button').setAttribute('href', result.suggested.url);
 
     if (result.suggested.desc) {
       $('.alt-desc').insertAdjacentHTML('afterbegin', result.suggested.desc);
@@ -233,12 +256,19 @@ function generalResult(result) {
 }
 
 function emptyResult(query) {
-  return stamp(templates.results.empty, $=> {
+  return stamp(templates.results.empty, $ => {
     $('.query').textContent = query;
-    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=91.0`;
+    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=${ESR}.0`;
   });
 }
 
+function compatResult(query, addon) {
+  return stamp(templates.results.compat, $ => {
+    $('.query').textContent = query;
+    $('.esr').textContent = ESR;
+    $('.button').href = addon.current_version.url;
+  });
+}
 
 
 window.addEventListener('load', function (e) {
