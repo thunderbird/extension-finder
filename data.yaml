@@ -143,6 +143,11 @@ r_name: Quote Colors & Collapse
 r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
 ---
+u_name: Windows Taskbar Unread Badge
+u_id: unread-badge@streiff.net
+r_name: Native support for an unread badge
+r_desc: <p>The functionality of this add-on has been added to Thunderbird 91.</p>
+---
 u_name: X-Unsent support
 u_id: X-Unsent_support@pl
 r_name: Native support for X-Unsent
