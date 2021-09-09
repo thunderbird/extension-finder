@@ -20,7 +20,7 @@ r_id: AutoAddressCleaner-T@Toshi_
 u_name: Autoarchive
 u_id: {b3a22f77-26b5-43d1-bd2f-9337488eacef}
 r_name: AutoarchiveReloaded
-r_link: https://addons.thunderbird.net/en-US/thunderbird/addon/autoarchivereloaded/
+r_link: https://addons.thunderbird.net/addon/autoarchivereloaded/
 r_id: AutoarchiveReloaded@brummolix.addons.mozilla.org
 ---
 u_name: Correct Identity
@@ -40,6 +40,12 @@ u_id: {847b3a00-7ab1-11d4-8f02-006008948af5}
 r_name: Thunderbird native OpenPGP support
 r_link: https://support.mozilla.org/en-US/kb/openpgp-thunderbird-howto-and-faq
 r_desc: <p>Thunderbird has integrated OpenPGP support since Thunderbird 78. The Enigmail add-on was only used to migrate keys in Thunderbird 78 and was completely decommissioned in Thunderbird 91.</p>
+---
+u_name: Flexible Identity
+u_id: fid@axiom
+r_name: Single Domain
+r_link: https://addons.thunderbird.net//addon/single-domain/
+r_id: singledomain@graeme.henry
 ---
 u_name: gContactSync
 u_id: gContactSync@pirules.net
@@ -74,7 +80,7 @@ r_id: languagetool-mailextension@languagetool.org
 u_name: Hide Local Folders
 u_id: hide-local-folders@alexcabal.com
 r_name: Hide Local Folders for TB78++
-r_link: https://addons.thunderbird.net/en-US/thunderbird/addon/hide-local-folders-for-tb78/
+r_link: https://addons.thunderbird.net/addon/hide-local-folders-for-tb78/
 r_id: hlf@pharqcon.com
 ---
 u_name: LightningButton
@@ -110,7 +116,7 @@ r_id: quotecolors@thunderbird-mail.de
 u_name: Nostalgy
 u_id: nostalgy@alain.frisch
 r_name: Manage and archive emails/Nostalgy++
-r_link: https://addons.thunderbird.net/en-us/thunderbird/addon/nostalgy_ng/
+r_link: https://addons.thunderbird.net/addon/nostalgy_ng/
 r_id: nostalgy@opto.one
 ---
 u_name: Quote Colors
