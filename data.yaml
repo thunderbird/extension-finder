@@ -5,6 +5,12 @@
 #r_id: ID of the replacement add-on
 #r_desc: [instead of r_id] HTML string with descriptions on how to accomplish similar things directly with Thunderbird, without using any add-on
 ---
+u_name: AttachmentExtractor Continued
+u_id: {attachmentextractor_cont@thunderbird-mail.de}
+r_name: Attachment Extractor
+r_link: https://addons.thunderbird.net/addon/attachment-extractor/
+r_id: the_stonehead@hotmail.com
+---
 u_name: Auto Address Cleaner
 u_id: {b65d0be3-cc20-44e1-bbaa-ea394dbffa34}
 r_name: Auto Address Cleaner T
