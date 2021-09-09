@@ -6,7 +6,7 @@
 #r_desc: [instead of r_id] HTML string with descriptions on how to accomplish similar things directly with Thunderbird, without using any add-on
 ---
 u_name: AttachmentExtractor Continued
-u_id: {attachmentextractor_cont@thunderbird-mail.de}
+u_id: attachmentextractor_cont@thunderbird-mail.de
 r_name: Attachment Extractor
 r_link: https://addons.thunderbird.net/addon/attachment-extractor/
 r_id: the_stonehead@hotmail.com
