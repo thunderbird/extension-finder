@@ -149,6 +149,12 @@ r_name: Birthday Calendar
 r_link: https://addons.thunderbird.net/addon/birthday-calendar/
 r_id: birthdaycalendar@rsjtdrjgfuzkfg.com
 ---
+u_name: ThunderStats! Your Thunderbird Statistics!
+u_id: thunderstats@micz.it
+r_name: ThirdStats
+r_link: https://addons.thunderbird.net/addon/thirdstats/
+r_id: thirdstats@devmount.de
+---
 u_name: Toggle Quotes
 u_id: quotes@dillinger
 r_name: Quote Colors & Collapse
