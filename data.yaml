@@ -107,6 +107,12 @@ r_name: *cloud - FileLink for Nextcloud and ownCloud
 r_link: https://addons.thunderbird.net/addon/filelink-nextcloud-owncloud
 r_id: cloud@johannes-endres.de
 ---
+u_name: New Folder Filters Button
+u_id: {9d8c34df-e80e-4d83-829b-6c9853020d9e}
+r_name: Filter on Folder Button 
+r_link: https://addons.thunderbird.net/addon/filter-on-folder-button/
+r_id: FoFB@drexler
+---
 u_name: New QuoteColors
 u_id: quotecolor-moz@librefox.org
 r_name: Quote Colors & Collapse
