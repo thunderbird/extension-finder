@@ -77,12 +77,6 @@ r_name: Grammar and Spell Checker — LanguageTool
 r_link: https://addons.thunderbird.net/thunderbird/addon/grammar-and-spell-checker/
 r_id: languagetool-mailextension@languagetool.org
 ---
-u_name: HeaderTools Lite
-u_id: hdrtoolslite@dillinger
-r_name: Header Tools Lite
-r_link: https://addons.thunderbird.net/addon/header-tools-lite/
-r_id: headerToolsLite@kaosmos.nnp
----
 u_name: Hide Local Folders
 u_id: hide-local-folders@alexcabal.com
 r_name: Hide Local Folders for TB78++
