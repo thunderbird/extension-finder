@@ -23,7 +23,19 @@ r_name: AutoarchiveReloaded
 r_link: https://addons.thunderbird.net/addon/autoarchivereloaded/
 r_id: AutoarchiveReloaded@brummolix.addons.mozilla.org
 ---
+u_name: AutoCopy
+u_id: {0FED7D55-65D4-47b6-A6DE-9A4ADB55355F}
+r_name: AutoCopy 78+
+r_link: https://addons.thunderbird.net/addon/autocopy-78/
+r_id: autocopy@jimdanner
+---
 u_name: AutoCopy 2
+u_id: autocopy2@teo.pl
+r_name: AutoCopy 78+
+r_link: https://addons.thunderbird.net/addon/autocopy-78/
+r_id: autocopy@jimdanner
+---
+u_name: AutoCopy_rebirth
 u_id: autocopy2@onesolo
 r_name: AutoCopy 78+
 r_link: https://addons.thunderbird.net/addon/autocopy-78/
