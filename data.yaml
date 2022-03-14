@@ -23,6 +23,12 @@ r_name: AutoarchiveReloaded
 r_link: https://addons.thunderbird.net/addon/autoarchivereloaded/
 r_id: AutoarchiveReloaded@brummolix.addons.mozilla.org
 ---
+u_name: AutoCopy 2
+u_id: autocopy2@onesolo
+r_name: AutoCopy 78+
+r_link: https://addons.thunderbird.net/addon/autocopy-78/
+r_id: autocopy@jimdanner
+---
 u_name: Correct Identity
 u_id: {47ef7cc0-2201-11da-8cd6-0800200c9a66}
 r_name: Identity Chooser
