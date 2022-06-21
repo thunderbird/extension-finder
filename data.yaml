@@ -107,6 +107,12 @@ r_name: Native calendar toolbar icons
 r_link: https://support.mozilla.org/en-US/kb/how-customize-toolbars
 r_desc: <p>Lightning is now built into Thunderbird and already contains most toolbar buttons that were previously provided by this add-on. You can add them by customizing the toolbar, without installing any add-on.</p>
 ---
+u_name: Message Filters Button
+u_id: message-filters-button@chrismalek.addons.mozilla.org
+r_name: Message Filters Button U
+r_link: https://addons.thunderbird.net/addon/message-filters-button-u/
+r_id: message_filters@U
+---
 u_name: MinimizeToTray revived
 u_id: mintrayr@tn123.ath.cx
 r_name: Native tray support or third-party application
