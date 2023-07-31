@@ -185,6 +185,12 @@ r_name: Birthday Calendar
 r_link: https://addons.thunderbird.net/addon/birthday-calendar/
 r_id: birthdaycalendar@rsjtdrjgfuzkfg.com
 ---
+u_name: ThunderHTMLedit
+u_id: jorgk@thunderHTMLedit
+r_name: HTML Source Editor
+r_link: https://addons.thunderbird.net/addon/html-source-editor/
+r_id: edithtmlsource@jobisoft.de
+---
 u_name: ThunderStats! Your Thunderbird Statistics!
 u_id: thunderstats@micz.it
 r_name: ThirdStats
