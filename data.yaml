@@ -97,9 +97,8 @@ r_id: languagetool-mailextension@languagetool.org
 ---
 u_name: Hide Local Folders
 u_id: hide-local-folders@alexcabal.com
-r_name: Hide Local Folders for TB78++
-r_link: https://addons.thunderbird.net/addon/hide-local-folders-for-tb78/
-r_id: hlf@pharqcon.com
+r_name: Thunderbird Supernova native support
+r_desc: <p>Thunderbird Supernova has integrated this feature in the meat balls menu in the folder pane header.</p>
 ---
 u_name: LightningButton
 u_id: lightningbutton@rsjtdrjgfuzkfg.com
