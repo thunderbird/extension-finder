@@ -177,6 +177,12 @@ r_name: Remove Duplicate Messages (alternative)
 r_link: https://addons.thunderbird.net/addon/removedupes/
 r_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
 ---
+u_name: Sender Domain
+u_id: senderdomain@rcruzs00
+r_name: Full Address Column
+r_link: https://addons.thunderbird.net/addon/full-address-column/
+r_id: full-address-column@lukasz.kosson.net
+---
 u_name: Slideshow
 u_id: slideshowski@totic.org
 r_name: Attachment Image Viewer/Slideshow
