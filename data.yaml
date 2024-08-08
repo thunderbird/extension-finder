@@ -92,8 +92,14 @@ r_id: gamb@pharqcon.com
 u_name: Grammar Checker
 u_id: grammarchecker@codedgers.com
 r_name: Grammar and Spell Checker — LanguageTool
-r_link: https://addons.thunderbird.net/thunderbird/addon/grammar-and-spell-checker/
+r_link: https://addons.thunderbird.net/addon/grammar-and-spell-checker/
 r_id: languagetool-mailextension@languagetool.org
+---
+u_name: Header Tools Light
+u_id: headerToolsLite@kaosmos.nnp
+r_name: Header Tools Improved
+r_link: https://addons.thunderbird.net/addon/header-tools-improved/
+r_id: hdrtoolslite@dillinger
 ---
 u_name: Hide Local Folders
 u_id: hide-local-folders@alexcabal.com
@@ -146,7 +152,7 @@ r_id: FoFB@drexler
 u_name: New QuoteColors
 u_id: quotecolor-moz@librefox.org
 r_name: Quote Colors & Collapse
-r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_link: https://addons.thunderbird.net/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
 ---
 u_name: Nostalgy
@@ -158,13 +164,13 @@ r_id: nostalgy@opto.one
 u_name: Quote Colors
 u_id: {B274D460-4DF9-454c-AC69-CA71398D7498}
 r_name: Quote Colors & Collapse
-r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_link: https://addons.thunderbird.net/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
 ---
 u_name: QuoteCollapse
 u_id: {0b62b504-857c-4f62-a336-2e8425bd5738}
 r_name: Quote Colors & Collapse
-r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_link: https://addons.thunderbird.net/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
 ---
 u_name: Remove Duplicate Messages
@@ -212,7 +218,7 @@ r_id: thirdstats@devmount.de
 u_name: Toggle Quotes
 u_id: quotes@dillinger
 r_name: Quote Colors & Collapse
-r_link: https://addons.thunderbird.net/thunderbird/addon/quotecolors/
+r_link: https://addons.thunderbird.net/addon/quotecolors/
 r_id: quotecolors@thunderbird-mail.de
 ---
 u_name: Windows Taskbar Unread Badge
