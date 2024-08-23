@@ -9,7 +9,7 @@
 // const R_LINK_FIELD = "r_link"; //.gsx$url.$t
 
 // Assume current ESR as current version, if it could not be extracted from user agent.
-var gUsedVersion = 91;
+var gUsedVersion = 128;
 
 // Define how old the latest version of an add-on may be, before it is considered unmaintained.
 const maintainedSpan = 365*24*60*60*1000; // Year
