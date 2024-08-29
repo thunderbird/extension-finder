@@ -72,7 +72,7 @@ function $(selector, parent = document) {
 }
 
 async function loadData() {
-  let url = "https://raw.githubusercontent.com/thundernest/extension-finder/master/data.yaml"
+  let url = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml"
   return fetch(url).then(r => r.text()).then(dataToJSON);
 }
 
