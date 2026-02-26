@@ -192,8 +192,6 @@ const TEMPLATES = {
  * @property {LunrIndex} idx - The Lunr search index.
  * @property {Object.<string, AddonRecord>} addons - Add-on records keyed by
  *    index ref.
- * @property {Map(<string>,<string>)} addonsById - Map of lowercase Add-on ID
- *    to Add-on name.
  */
 
 /**
@@ -341,17 +339,15 @@ function buildIndex(data) {
   b.ref('idx'); // unique index reference
 
   let addons = {};
-  let addonsById = new Map;
 
   data.forEach(e => { // google sheets will need data.feed.entry.forEach
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
-    addonsById.set(record.id.toLowerCase(), record.name);
   });
 
   let idx = b.build();
-  return { idx, addons, addonsById };
+  return { idx, addons };
 }
 
 /**
@@ -414,7 +410,6 @@ async function search(query) {
       let files = addon?.current_version?.files;
       if (files.length > 0 &&
         (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
-        const reportEntry = CONTEXT.report?.addons.find(a => a.id === addonId);
         CONTEXT.outEl.innerHTML = '';
         CONTEXT.outEl.appendChild(maintainedResult(query, addon, false, reportEntry));
         return;
@@ -488,7 +483,7 @@ async function init() {
     }
   }
 
-  const { idx, addons, addonsById } = buildIndex(yamlData);
+  const { idx, addons } = buildIndex(yamlData);
 
   let input = $('#searchInput');
   input.setAttribute('placeholder', 'name of unmaintained extension');
