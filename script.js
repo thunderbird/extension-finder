@@ -29,7 +29,6 @@ class StorageWithTTL {
       return null;
     }
 
-    console.log("Found cached entry for", key);
     return entry.value;
   }
 
@@ -385,11 +384,10 @@ async function search(query) {
   CONTEXT.replacementsListIntro.hidden = true;
   const isThunderbird = true || navigator.userAgent.split(" ").pop().startsWith("Thunderbird");
 
-  const reportEntry = CONTEXT.report?.addons.find(
-    a => a.name.toLowerCase() === query?.toLowerCase()
-  );
-  const hasUsedVersion = reportEntry?.compat.some(c => c.appVersion === USED_VERSION) ?? false;
-  console.log(reportEntry?.compat);
+  //const reportEntry = CONTEXT.report?.addons.find(
+  //  a => a.name.toLowerCase() === query?.toLowerCase()
+  //);
+  //const hasUsedVersion = reportEntry?.compat.some(c => c.appVersion === USED_VERSION) ?? false;
 
   // Before showing results for the alternative search, check if the add-on is
   // actually compatible and just needs to be updated, or if it still is maintained
