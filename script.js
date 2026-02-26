@@ -1,3 +1,5 @@
+import * as idb from './idb-keyval.mjs';
+
 /* global lunr */
 
 // If we consider to use google sheets as data source, these might be useful:
@@ -7,6 +9,38 @@
 // const U_NAME_FIELD = "u_name"; //.gsx$legacycontent.$t,
 // const R_NAME_FIELD = "r_name"; //.gsx$webextensionreplacement.$t,
 // const R_LINK_FIELD = "r_link"; //.gsx$url.$t
+
+class StorageWithTTL {
+  // Default to a TTL of 1 day.
+  constructor(ttl = 24 * 60 * 60 * 1000) {
+    this.ttl = ttl;
+  }
+
+  async set(key, value) {
+    await idb.set(key, { value, timestamp: Date.now() });
+  }
+
+  async get(key) {
+    const entry = await idb.get(key);
+    if (!entry) return null;
+
+    if (Date.now() - entry.timestamp > this.ttl) {
+      await idb.del(key);
+      return null;
+    }
+
+    console.log("Found cached entry for", key);
+    return entry.value;
+  }
+
+  async del(key) {
+    await idb.del(key);
+  }
+
+  async clear() {
+    await idb.clear();
+  }
+}
 
 // Current Thunderbird version used for compatibility checks. Set dynamically
 // from product-details.mozilla.org; falls back to 128 if the fetch fails.
@@ -18,10 +52,12 @@ let LATEST_THUNDERBIRD_VERSION = null;
 
 // Define how old the latest version of an add-on may be, before it is
 // considered unmaintained.
-const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // Year
+const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
+
 const YAML_URL = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml";
 const PRODUCT_URL = "https://product-details.mozilla.org/1.0/thunderbird_versions.json";
-const CACHED_ADDONS = {};
+const CONTEXT = {}
+const DB = new StorageWithTTL();
 
 const TEMPLATES = {
   results: {
@@ -121,27 +157,6 @@ const TEMPLATES = {
  */
 
 /**
- * Context object passed to search() containing the index, lookup maps, and
- * relevant DOM elements.
- *
- * @typedef {Object} SearchContext
- *
- * @property {LunrIndex} idx - The Lunr search index.
- * @property {Object.<string, AddonRecord>} addons - Addon records keyed by
- *    index ref.
- * @property {AddonRecord[]} allAddons - All addon records sorted
- *    alphabetically.
- * @property {HTMLInputElement} exactmatch - The exact-match checkbox element.
- * @property {HTMLElement} outEl - The container element for rendered results.
- * @property {HTMLElement} replacementsListIntro - Intro element shown when no
- *    query is active.
- * @property {string|null} transmitted_addon_name - Addon name passed via URL
- *    when not in local DB.
- * @property {AtnAddon|null} addon - ATN addon data for the transmitted addon,
- *    if fetched.
- */
-
-/**
  * The built search index and addon lookup maps produced by buildIndex().
  *
  * @typedef {Object} AddonIndex
@@ -149,7 +164,7 @@ const TEMPLATES = {
  * @property {LunrIndex} idx - The Lunr search index.
  * @property {Object.<string, AddonRecord>} addons - Addon records keyed by
  *    index ref.
- * @property {Object.<string, string>} addonsById - Map of lowercase addon ID
+ * @property {Map(<string>,<string>)} addonsById - Map of lowercase addon ID
  *    to addon name.
  */
 
@@ -275,13 +290,13 @@ function buildIndex(data) {
   b.ref('idx'); // unique index reference
 
   let addons = {};
-  let addonsById = {};
+  let addonsById = new Map;
 
   data.forEach(e => { // google sheets will need data.feed.entry.forEach
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
-    addonsById[record.id.toLowerCase()] = record.name;
+    addonsById.set(record.id.toLowerCase(), record.name);
   });
 
   let idx = b.build();
@@ -315,49 +330,47 @@ function process(entry) {
  * shows a maintained/compat result instead.
  * 
  * @param {string|null} query - The search string, or null to show all addons.
- * @param {SearchContext} context - Search context built by init().
  */
-function search(query, {
-  idx,
-  addons, allAddons,
-  exactmatch, outEl, replacementsListIntro,
-  transmitted_addon_name, addon
-}) {
-  replacementsListIntro.hidden = true;
+async function search(query) {
+  CONTEXT.replacementsListIntro.hidden = true;
+  const isThunderbird = true || navigator.userAgent.split(" ").pop().startsWith("Thunderbird");
 
-  // Show help about updating add-ons instead of searching for results.
-  if (query && transmitted_addon_name && query == transmitted_addon_name) {
-    // transmitted_addon_name is set,
-    // - if this has been called from Thunderbird,
-    // - if we do not have a database entry for the requested add-on
-
-    // Is it compatible and therefore this call a caching issue?
+  // Before showing results for the alternative search, check if the add-on is
+  // actually compatible and just needs to be updated, or if it still is maintained
+  // but not yet compatible. This will only work for add-on which have been passed
+  // into the extension finder using an id.
+  const addonId = await DB.get(`name:${query}`);
+  // Do a local lookup. Under certain circumstances, we could do an extened
+  // lookup based on the name.
+  const addon = await DB.get(`id:${addonId}`);
+  if (addon) {
+    // Is it compatible and therefore this call is a caching issue?
     let compat = addon?.current_version?.compatibility?.thunderbird;
     if (
       compat &&
       (!compat.max || compat.max == "*" ||
         parseInt(compat.max.toString().split(".")[0], 10) >= USED_VERSION)
     ) {
-      outEl.innerHTML = '';
-      outEl.appendChild(maintainedResult(query, addon, true));
+      CONTEXT.outEl.innerHTML = '';
+      CONTEXT.outEl.appendChild(maintainedResult(query, addon, true));
       return;
     }
 
     // Is it still maintained?
     let files = addon?.current_version?.files;
     if (files.length > 0 &&
-        (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
-      outEl.innerHTML = '';
-      outEl.appendChild(maintainedResult(query, addon, false));
+      (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
+      CONTEXT.outEl.innerHTML = '';
+      CONTEXT.outEl.appendChild(maintainedResult(query, addon, false));
       return;
     }
   }
 
   let results, out;
   if (query) {
-    results = idx.search('*' + query + '*');
-    out = results.map(r => addons[r.ref]);
-    if (exactmatch.checked) {
+    results = CONTEXT.idx.search('*' + query + '*');
+    out = results.map(r => CONTEXT.addons[r.ref]);
+    if (CONTEXT.exactmatch.checked) {
       out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
     } else {
       // We do request that each of the entered words is part of the name.
@@ -366,16 +379,16 @@ function search(query, {
         words.every(word => f.name.toLowerCase().includes(word)));
     }
   } else {
-    replacementsListIntro.hidden = false;
-    out = allAddons;
+    CONTEXT.replacementsListIntro.hidden = false;
+    out = CONTEXT.allAddons;
   }
 
-  outEl.innerHTML = '';
+  CONTEXT.outEl.innerHTML = '';
 
   if (out.length) {
-    out.forEach(r => outEl.appendChild(resultRow(r)));
+    out.forEach(r => CONTEXT.outEl.appendChild(resultRow(r)));
   } else {
-    outEl.appendChild(emptyResult(query));
+    CONTEXT.outEl.appendChild(emptyResult(query));
   }
 }
 
@@ -396,65 +409,50 @@ async function init() {
   let replacementsListIntro = $('#replacementsListIntro');
 
   let allAddons = Object.values(addons).sort((a, b) =>
-    (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
   let loc = new URL(window.location);
-  let query = loc.searchParams.get("q");
-  if (query) query = decodeURIComponent(query);
+  let queryName = loc.searchParams.get("q");
+  if (queryName) queryName = decodeURIComponent(queryName);
 
-  let addon = null;
-  let transmitted_addon_name = null;
-
-  // Extract used version from user agent.
-  let userAgent = navigator.userAgent.split(" ").pop();
-  if (userAgent.startsWith("Thunderbird")) {
-    USED_VERSION = userAgent.split("/").pop().split(".")[0];
-    
-    let id = loc.searchParams.get("id");
-    if (id) {
-      id = decodeURIComponent(id);
-      exactmatch.checked = true;
-
-      if (addonsById.hasOwnProperty(id.toLowerCase())) {
-        // Alter the entered name to match the stored add-on name
-        // associated with that ID.
-        query = addonsById[id.toLowerCase()];
-      } else {
-        // Not in our database, try to flip to a name provided by ATN.
-        addon = await getAddonData(id);
-        if (addon && addon.name) {
-          query = addon.name["en-US"]
-            ? addon.name["en-US"]
-            : Object.values(addon.name)[0];
-        }
-        // Store the used name, so search can fallback to the advanced information
-        // available for the linked addon.
-        transmitted_addon_name = query;
-      }
-    }
-  }
-
-  let searchContext = {
-    idx, addons, allAddons,
-    exactmatch, outEl, replacementsListIntro,
-    transmitted_addon_name, addon
-  };
+  // Assign global CONTEXT
+  CONTEXT.idx = idx;
+  CONTEXT.addons = addons;
+  CONTEXT.allAddons = allAddons;
+  CONTEXT.addonsById = addonsById;
+  CONTEXT.exactmatch = exactmatch;
+  CONTEXT.outEl = outEl;
+  CONTEXT.replacementsListIntro = replacementsListIntro;
 
   input.addEventListener('input', function () {
-    search(input.value.trim(), searchContext);
+    search(input.value.trim());
   }, { passive: true });
 
   exactmatch.addEventListener('input', function () {
-    search(input.value.trim(), searchContext);
+    search(input.value.trim());
   }, { passive: true });
 
   input.disabled = false;
 
-  if (query) {
-    input.value = query;
-    search(query, searchContext);
+  // The extension finder can be called with an id, which triggers an exact match,
+  // a compatibility check on the given add-on. We also enforce the query to use
+  // an official name.
+  let queryId = loc.searchParams.get("id")?.toLowerCase();
+  if (queryId) {
+    queryId = decodeURIComponent(queryId);
+    exactmatch.checked = true;
+
+    // Get the add-on info from ATN, but enforce the name used alongside with
+    // it to match the name associated with the id as stored in our YAML database.
+    let { name } = await getAddonData(queryId, addonsById.get(queryId));
+
+    input.value = name;
+    search(name);
+  } else if (queryName) {
+    input.value = queryName;
+    search(queryName);
   } else {
-    search(null, searchContext);
+    search(null);
   }
 
   input.focus();
@@ -477,19 +475,43 @@ function resultRow(result) {
 
 
 /**
- * Fetches addon metadata from the ATN API, with in-memory caching.
- * 
- * @param {string} id - The ATN addon ID or slug.
- * 
- * @returns {Promise<AtnAddon>} Resolved ATN addon metadata object.
+ * Resolves the display name for an ATN addon.
+ *
+ * @param {AtnAddon} addon - The ATN addon object.
+ * @param {string} [forcedName] - Override name; takes priority if provided.
+ *
+ * @returns {string} The resolved display name.
  */
-async function getAddonData(id) {
-  if (!(id in CACHED_ADDONS)) {
-    CACHED_ADDONS[id] = await requestJson(
-      `https://addons.thunderbird.net/api/v4/addons/addon/${id}/`
-    );
+function resolveAddonName(addon, forcedName) {
+  return forcedName ?? addon?.name?.["en-US"] ?? Object.values(addon?.name ?? {})[0];
+}
+
+/**
+ * Fetches addon metadata from the ATN API, with IndexedDB caching.
+ *
+ * @param {string} id - The ATN addon ID.
+ * @param {string} [forcedName] - Name to use instead of the ATN addon name;
+ *    typically the canonical name from the YAML database.
+ *
+ * @returns {Promise<{addon: AtnAddon, name: string}>} Resolved ATN addon
+ *    metadata and the display name to use.
+ */
+async function getAddonData(id, forcedName) {
+  const cached = await DB.get(`id:${id}`);
+  if (cached) {
+    return { addon: cached, name: resolveAddonName(cached, forcedName) };
   }
-  return CACHED_ADDONS[id];
+
+  const addon = await requestJson(
+    `https://addons.thunderbird.net/api/v4/addons/addon/${id}/`
+  );
+  const name = resolveAddonName(addon, forcedName);
+
+  await Promise.all([
+    DB.set(`id:${id}`, addon),
+    DB.set(`name:${name}`, id),
+  ]);
+  return { addon, name };
 }
 
 /**
@@ -514,11 +536,11 @@ function addonResult(result) {
   // Fetch ATN metadata asynchronously and fill in the live nodes once
   // available. The fragment is returned immediately with the static data.
   getAddonData(result.suggested.id)
-    .then(data => {
-      authorEl.textContent = data.authors.map(a => a.name).join(', ');
-      iconEl.src = data.icon_url;
-      if (data.summary["en-US"]) {
-        descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
+    .then(({ addon }) => {
+      authorEl.textContent = addon.authors.map(a => a.name).join(', ');
+      iconEl.src = addon.icon_url;
+      if (addon.summary["en-US"]) {
+        descEl.insertAdjacentHTML('afterbegin', addon.summary["en-US"]);
       }
     }).catch(console.error);
 
