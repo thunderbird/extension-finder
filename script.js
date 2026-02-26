@@ -448,6 +448,21 @@ async function search(query) {
 }
 
 /**
+ * Populates the search input's datalist with a set of addon names.
+ *
+ * @param {Set<string>} names - Set of addon display names to offer as options.
+ */
+function setDatalist(names) {
+  $('#addon-suggestions').replaceChildren(
+    ...[...names].map(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      return opt;
+    })
+  );
+}
+
+/**
  * Initialises the UI: resolves URL parameters, fetches ATN data if needed, and
  * wires up search event listeners.
  */
@@ -478,19 +493,11 @@ async function init() {
   CONTEXT.outEl = outEl;
   CONTEXT.replacementsListIntro = replacementsListIntro;
 
-  input.addEventListener('input', function () {
-    search(input.value.trim());
-  }, { passive: true });
-
-  exactmatch.addEventListener('input', function () {
-    search(input.value.trim());
-  }, { passive: true });
-
   input.disabled = false;
 
   // The extension finder can be called with an id, which triggers an exact match,
-  // a compatibility check on the given add-on. We also enforce the query to use
-  // an official name.
+  // and a compatibility check on the given add-on. We also enforce the query to
+  // use an official name.
   let queryId = loc.searchParams.get("id")?.toLowerCase();
   if (queryId) {
     queryId = decodeURIComponent(queryId);
@@ -509,10 +516,36 @@ async function init() {
     search(null);
   }
 
+  // Populate datalist with YAML names.
+  const suggestionNames = new Set(Object.values(addons).map(a => a.name));
+  setDatalist(suggestionNames);
+
   input.focus();
-  
-  // Load the REPORT DB after the initial page load.
+
+  input.addEventListener('input', function () {
+    // Update datalist visibility. Hide the datalist dropdown when the input
+    // already exactly matches the only remaining suggestion.
+    const val = input.value.trim();
+    const opts = [...$('#addon-suggestions').options];
+    const matches = opts.filter(o => o.value.toLowerCase().includes(val.toLowerCase()));
+    if (matches.length === 1 && matches[0].value.toLowerCase() === val.toLowerCase()) {
+      input.removeAttribute('list');
+    } else {
+      input.setAttribute('list', 'addon-suggestions');
+    }
+    search(val);
+  }, { passive: true });
+
+  exactmatch.addEventListener('input', function () {
+    search(input.value.trim());
+  }, { passive: true });
+
+  // Load the report data after the initial page load.
   CONTEXT.report = await loadReports();
+
+  // Merge add-on names from the loaded report data into the datalist.
+  for (const a of CONTEXT.report.addons) suggestionNames.add(a.name);
+  setDatalist(suggestionNames);
 }
 
 /**
