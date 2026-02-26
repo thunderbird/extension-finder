@@ -56,6 +56,7 @@ const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
 
 const YAML_URL = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml";
 const PRODUCT_URL = "https://product-details.mozilla.org/1.0/thunderbird_versions.json";
+const REPORT_URL = "https://raw.githubusercontent.com/thunderbird/webext-reports/main/docs/all.json"
 const CONTEXT = {}
 const DB = new StorageWithTTL();
 
@@ -154,6 +155,33 @@ const TEMPLATES = {
  *    compatibility range.
  * @property {string} current_version.compatibility.thunderbird.max - Maximum
  *    compatible Thunderbird version, or "*" for all versions.
+ */
+
+/**
+ * A single compatibility entry from the webext-reports database.
+ *
+ * @typedef {Object} ReportCompat
+ *
+ * @property {string} appVersion - Thunderbird major version (e.g. "128").
+ * @property {string} type - Release type: "release", "current-esr", etc.
+ * @property {string} [extVersion] - Extension version string, if available.
+ * @property {boolean} isWebExtension - True if the extension is a WebExtension.
+ * @property {boolean} isExperiment - True if the extension uses experiments.
+ * @property {string} [url] - Download URL for this version, if available.
+ */
+
+/**
+ * A single addon entry from the webext-reports database.
+ *
+ * @typedef {Object} ReportAddon
+ *
+ * @property {string} id - The addon GUID.
+ * @property {string} name - Display name of the addon.
+ * @property {Object.<string, string>} icons - Icon URLs keyed by pixel size
+ *    (e.g. "32", "64").
+ * @property {ReportCompat[]} compat - Compatibility entries across Thunderbird
+ *    versions, ordered from newest to oldest.
+ * @property {string[]} badges - Badge identifiers assigned to this addon.
  */
 
 /**
@@ -256,7 +284,11 @@ async function requestJson(url) {
  */
 async function loadVersions() {
   try {
-    const versions = await requestJson(PRODUCT_URL);
+    let versions = await DB.get('versions');
+    if (!versions) {
+      versions = await requestJson(PRODUCT_URL);
+      await DB.set('versions', versions);
+    }
     THUNDERBIRD_ESR = versions.THUNDERBIRD_ESR;
     THUNDERBIRD_ESR_NEXT = versions.THUNDERBIRD_ESR_NEXT;
     LATEST_THUNDERBIRD_VERSION = versions.LATEST_THUNDERBIRD_VERSION;
@@ -272,8 +304,27 @@ async function loadVersions() {
  * @returns {Promise<YamlEntry[]>} Array of parsed entry objects.
  */
 async function loadData() {
+  const cached = await DB.get('yaml');
+  if (cached) return cached;
+
   const response = await fetch(YAML_URL);
-  return dataToJSON(await response.text());
+  const data = dataToJSON(await response.text());
+  await DB.set('yaml', data);
+  return data;
+}
+
+/**
+ * Fetches the webext-reports database from GitHub, with IndexedDB caching.
+ *
+ * @returns {Promise<{addons: ReportAddon[]}>} Parsed reports JSON.
+ */
+async function loadReports() {
+  const cached = await DB.get('reports');
+  if (cached) return cached;
+
+  const reports = await requestJson(REPORT_URL);
+  await DB.set('reports', reports);
+  return reports;
 }
 
 /**
@@ -366,6 +417,10 @@ async function search(query) {
     }
   }
 
+  // Use REPORT DB, if available
+  const report = CONTEXT.report.addons.find(a => a.name.includes(query));
+  console.log(report);
+
   let results, out;
   if (query) {
     results = CONTEXT.idx.search('*' + query + '*');
@@ -455,6 +510,9 @@ async function init() {
   }
 
   input.focus();
+  
+  // Load the REPORT DB after the initial page load.
+  CONTEXT.report = await loadReports();
 }
 
 /**
