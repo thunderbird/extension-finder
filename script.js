@@ -120,8 +120,10 @@ const TEMPLATES = {
  * @property {string} name - Display name of the replacement.
  * @property {string} url - URL of the replacement page.
  * @property {string} [id] - Add-on ID, present when replacement is an add-on.
- * @property {string} [desc] - HTML description, present when there is no 
+ * @property {string} [desc] - HTML description, present when there is no
  *    replacement add-on, but some other solution.
+ * @property {ReportAddon} [reportEntry] - Report entry for this add-on,
+ *    populated during search.
  */
 
 /**
@@ -438,6 +440,10 @@ async function search(query) {
   }
 
   CONTEXT.outEl.innerHTML = '';
+  out.forEach(o => o.suggested.reportEntry = CONTEXT.report?.addons.find(
+    a => a.id === o.suggested.id
+  ));
+  out = out.filter(o => !o.suggested.reportEntry || o.suggested.reportEntry.compat.filter(c => c.extVersion).length);
 
   if (out.length) {
     out.forEach(r => CONTEXT.outEl.appendChild(resultRow(r)));
@@ -642,9 +648,7 @@ function addonResult(result) {
         descEl.insertAdjacentHTML('afterbegin', addon.summary["en-US"]);
       }
 
-      const reportEntry = CONTEXT.report?.addons.find(
-        a => a.name.toLowerCase() === result.suggested.name.toLowerCase()
-      );
+      const reportEntry = result.suggested.reportEntry;
       if (reportEntry) {
         const typeOrder = ['current-esr', 'next-esr', 'release'];
         const entries = typeOrder
