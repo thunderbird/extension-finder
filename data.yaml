@@ -173,6 +173,12 @@ r_name: Manage and archive emails/Nostalgy++
 r_link: https://addons.thunderbird.net/addon/nostalgy_ng/
 r_id: nostalgy@opto.one
 ---
+u_name: Quicktext
+u_id: {8845E3B3-E8FB-40E2-95E9-EC40294818C4}
+r_name: Clippings for Thunderbird
+r_link: https://addons.thunderbird.net/addon/clippings-tb/
+r_id: clippings-tb@aecreations.github.io
+---
 u_name: Quote Colors
 u_id: {B274D460-4DF9-454c-AC69-CA71398D7498}
 r_name: Quote Colors & Collapse
