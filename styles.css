@@ -138,16 +138,33 @@ a:link {
   grid-column: span 2;
 }
 
-.help {
-  margin: 2rem 2rem 0 2rem;
-}
-.help p {
-  text-align: justify; 
+details.help {
+  margin: 1.5rem -2rem -1.5rem;
+  padding: .75rem 2rem;
+  background: hsl(199, 30%, 82%);
+  border-top: 1px solid hsl(199, 50%, 62%);
 }
 
-.help img {
+details.help summary {
+  cursor: pointer;
+  font-size: .9em;
+  color: #333;
+}
+
+details.help[open] summary {
+  margin-bottom: 1rem;
+}
+
+details.help p {
+  font-size: .9em;
+  text-align: justify;
+}
+
+details.help img {
+  display: block;
   border: 2px solid grey;
-  margin-top: 1rem;
+  margin: 1rem auto 0;
+  max-width: 100%;
 }
 
 .compat-entry {
@@ -177,5 +194,10 @@ a:link {
   }
   .legacy {
     font-size: .9rem;
+  }
+
+  details.help {
+    margin: 1rem -1rem -1rem;
+    padding: .75rem 1rem;
   }
 }

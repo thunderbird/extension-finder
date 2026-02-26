@@ -67,16 +67,28 @@
           </li>
         </template>
         <template id="search-result-compat">
-          <li class="noresults">
-            <h2>
-              The add-on &ldquo;<span class="query"></span>&rdquo; seems to be maintained and is compatible with Thunderbird <span class="usedVersion"></span>.
-            </h2>
-            <a class="button">Show Add-on</a>
-            <div class="help">
-              <p>Directly after updating Thunderbird, it is however possible that the add-on is still marked as incompatible. Either the add-on manager did not update the displayed information after the automatic add-on update (re-opening the add-on manger should fix that), or the automatic update check failed due to a connection timeout to addons.thunderbird.net.</p>             
+          <li>
+            <div class="note" style="text-align:center">
+              <h2>The add-on seems to be maintained and is compatible with Thunderbird <span class="usedVersion"></span>.</h2>
+            </div>
+            <div class="alternative">
+              <img class="icon">
+              <div class="info">
+                <h3 class="alt-name"></h3>
+                <p class="alt-desc"></p>
+                <div class="byline">by <span class="alt-author"></span></div>
+                <div class="compat-info byline"></div>
+              </div>
+              <div class="cta">
+                <a class="button">Show Add-on</a>
+              </div>
+            </div>
+            <details class="help">
+              <summary>Still showing as incompatible?</summary>
+              <p>Directly after updating Thunderbird, it is however possible that the add-on is still marked as incompatible. Either the add-on manager did not update the displayed information after the automatic add-on update (re-opening the add-on manger should fix that), or the automatic update check failed due to a connection timeout to addons.thunderbird.net.</p>
               <p>Manually search for add-on updates by clicking on the gear menu in the add-on manager as shown below.</p>
               <img src="update-addons.png"/>
-            </div>
+            </details>
           </li>
         </template>
         <template id="search-result-notyetcompat">

@@ -402,7 +402,7 @@ async function search(query) {
           parseInt(compat.max.toString().split(".")[0], 10) >= USED_VERSION)
       ) {
         CONTEXT.outEl.innerHTML = '';
-        CONTEXT.outEl.appendChild(maintainedResult(query, addon, true));
+        CONTEXT.outEl.appendChild(maintainedResult(query, addon, true, reportEntry));
         return;
       }
 
