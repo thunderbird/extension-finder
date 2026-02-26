@@ -384,46 +384,45 @@ function process(entry) {
  */
 async function search(query) {
   CONTEXT.replacementsListIntro.hidden = true;
-  const isThunderbird = true || navigator.userAgent.split(" ").pop().startsWith("Thunderbird");
-  USED_VERSION = 148;
-  
-  //const reportEntry = CONTEXT.report?.addons.find(
-  //  a => a.name.toLowerCase() === query?.toLowerCase()
-  //);
-  //const hasUsedVersion = reportEntry?.compat.some(c => c.appVersion === USED_VERSION) ?? false;
 
-  // Before showing results for the alternative search, check if the add-on is
-  // actually compatible and just needs to be updated, or if it still is maintained
-  // but not yet compatible. This will only work for add-on which have been passed
-  // into the extension finder using an id.
-  const addonId = await DB.get(`name:${query}`);
-  // Do a local lookup. Under certain circumstances, we could do an extened
-  // lookup based on the name.
-  const addon = await DB.get(`id:${addonId}`);
-  if (addon) {
-    // Is it compatible and therefore this call is a caching issue?
-    let compat = addon?.current_version?.compatibility?.thunderbird;
-    if (
-      compat &&
-      (!compat.max || compat.max == "*" ||
-        parseInt(compat.max.toString().split(".")[0], 10) >= USED_VERSION)
-    ) {
-      CONTEXT.outEl.innerHTML = '';
-      CONTEXT.outEl.appendChild(maintainedResult(query, addon, true));
-      return;
-    }
+  const reportEntry = CONTEXT.report?.addons.find(
+    a => a.name.toLowerCase() === query?.toLowerCase()
+  );
+  // If the currently entered name matches an add-on listed in the report DB
+  // (probably selected via auto complete), grab its ID.
+  const addonId = reportEntry?.id;
 
-    // Is it still maintained?
-    let files = addon?.current_version?.files;
-    if (files.length > 0 &&
-      (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
-      const reportEntry = CONTEXT.report?.addons.find(a => a.id === addonId);
-      CONTEXT.outEl.innerHTML = '';
-      CONTEXT.outEl.appendChild(maintainedResult(query, addon, false, reportEntry));
-      return;
+  // If the user has entered the name of an existing, specific add-on, check if
+  // the add-on is compatible and simply needs to be updated, or if it is still
+  // maintained but not yet compatible.
+  if (addonId) {
+    const addon = await getAddonData(addonId);
+    if (addon) {
+      // Is it compatible? Show info and help to resolve a caching issue?
+      let compat = addon?.current_version?.compatibility?.thunderbird;
+      if (
+        compat &&
+        (!compat.max || compat.max == "*" ||
+          parseInt(compat.max.toString().split(".")[0], 10) >= USED_VERSION)
+      ) {
+        CONTEXT.outEl.innerHTML = '';
+        CONTEXT.outEl.appendChild(maintainedResult(query, addon, true));
+        return;
+      }
+
+      // Is it still maintained?
+      let files = addon?.current_version?.files;
+      if (files.length > 0 &&
+        (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
+        const reportEntry = CONTEXT.report?.addons.find(a => a.id === addonId);
+        CONTEXT.outEl.innerHTML = '';
+        CONTEXT.outEl.appendChild(maintainedResult(query, addon, false, reportEntry));
+        return;
+      }
     }
   }
 
+  // Show alternatives.
   let results, out;
   if (query) {
     results = CONTEXT.idx.search('*' + query + '*');
@@ -524,9 +523,8 @@ async function init() {
     queryId = decodeURIComponent(queryId);
     exactmatch.checked = true;
 
-    // Get the add-on info from ATN, but enforce the name used alongside with
-    // it to match the name associated with the id as stored in our YAML database.
-    let { name } = await getAddonData(queryId, addonsById.get(queryId));
+    const addon = await getAddonData(queryId);
+    const name = resolveAddonName(addon);
 
     input.value = name;
     search(name);
@@ -584,40 +582,32 @@ function resultRow(result) {
  * Resolves the display name for an ATN Add-on.
  *
  * @param {AtnAddon} addon - The ATN Add-on object.
- * @param {string} [forcedName] - Override name; takes priority if provided.
  *
  * @returns {string} The resolved display name.
  */
-function resolveAddonName(addon, forcedName) {
-  return forcedName ?? addon?.name?.["en-US"] ?? Object.values(addon?.name ?? {})[0];
+function resolveAddonName(addon) {
+  return addon?.name?.["en-US"] ?? Object.values(addon?.name ?? {})[0];
 }
 
 /**
  * Fetches Add-on metadata from the ATN API, with IndexedDB caching.
  *
  * @param {string} id - The Add-on ID.
- * @param {string} [forcedName] - Name to use instead of the ATN Add-on name;
- *    typically the canonical name from the YAML database.
  *
  * @returns {Promise<{addon: AtnAddon, name: string}>} Resolved ATN Add-on
  *    metadata and the display name to use.
  */
-async function getAddonData(id, forcedName) {
-  const cached = await DB.get(`id:${id}`);
+async function getAddonData(id) {
+  const cached = await DB.get(`addon:${id}`);
   if (cached) {
-    return { addon: cached, name: resolveAddonName(cached, forcedName) };
+    return cached;
   }
 
   const addon = await requestJson(
     `https://addons.thunderbird.net/api/v4/addons/addon/${id}/`
   );
-  const name = resolveAddonName(addon, forcedName);
-
-  await Promise.all([
-    DB.set(`id:${id}`, addon),
-    DB.set(`name:${name}`, id),
-  ]);
-  return { addon, name };
+  await DB.set(`addon:${id}`, addon);
+  return addon;
 }
 
 /**
@@ -643,7 +633,7 @@ function addonResult(result) {
   // Fetch ATN metadata asynchronously and fill in the live nodes once
   // available. The fragment is returned immediately with the static data.
   getAddonData(result.suggested.id)
-    .then(({ addon }) => {
+    .then(addon => {
       authorEl.textContent = addon.authors.map(a => a.name).join(', ');
       iconEl.src = addon.icon_url;
       if (addon.summary["en-US"]) {
