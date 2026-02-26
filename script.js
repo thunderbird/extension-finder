@@ -419,7 +419,6 @@ async function init() {
   CONTEXT.idx = idx;
   CONTEXT.addons = addons;
   CONTEXT.allAddons = allAddons;
-  CONTEXT.addonsById = addonsById;
   CONTEXT.exactmatch = exactmatch;
   CONTEXT.outEl = outEl;
   CONTEXT.replacementsListIntro = replacementsListIntro;
