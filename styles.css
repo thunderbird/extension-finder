@@ -150,6 +150,12 @@ a:link {
   margin-top: 1rem;
 }
 
+.compat-entry {
+  display: inline-block;
+  margin-right: .5em;
+  font-style: italic;
+}
+
 @media screen and (max-width: 500px) {
   body {
     font-size: 12px;

@@ -107,7 +107,7 @@ const TEMPLATES = {
  * @property {string} r_name - Name of the replacement add-on.
  * @property {string} r_link - URL for the "Learn more" button (SUMO article
  *    or ATN add-on page).
- * @property {string} [r_id] - ATN ID of the replacement add-on. Mutually
+ * @property {string} [r_id] - Add-on ID of the replacement add-on. Mutually
  *    exclusive with r_desc.
  * @property {string} [r_desc] - HTML description of a built-in replacement.
  *    Mutually exclusive with r_id.
@@ -120,10 +120,9 @@ const TEMPLATES = {
  *
  * @property {string} name - Display name of the replacement.
  * @property {string} url - URL of the replacement page.
- * @property {string} [id] - ATN ID; present when the replacement is an ATN
- *    add-on.
- * @property {string} [desc] - HTML description; present when there is no ATN
- *    replacement add-on.
+ * @property {string} [id] - Add-on ID, present when replacement is an add-on.
+ * @property {string} [desc] - HTML description, present when there is no 
+ *    replacement add-on, but some other solution.
  */
 
 /**
@@ -138,12 +137,12 @@ const TEMPLATES = {
  */
 
 /**
- * Subset of ATN API addon metadata used by this script.
+ * Subset of ATN API Add-on metadata used by this script.
  *
  * @typedef {Object} AtnAddon
  *
- * @property {Object.<string, string>} name - Localized addon name.
- * @property {string} icon_url - URL of the addon icon.
+ * @property {Object.<string, string>} name - Localized Add-on name.
+ * @property {string} icon_url - URL of the Add-on icon.
  * @property {Object.<string, string>} summary - Localized short description.
  * @property {Array<{name: string}>} authors - List of authors.
  * @property {Object} current_version - Current version metadata.
@@ -163,7 +162,7 @@ const TEMPLATES = {
  * @typedef {Object} ReportCompat
  *
  * @property {string} appVersion - Thunderbird major version (e.g. "128").
- * @property {string} type - Release type: "release", "current-esr", etc.
+ * @property {string} type - Release type: "release", "current-esr", or "next-esr".
  * @property {string} [extVersion] - Extension version string, if available.
  * @property {boolean} isWebExtension - True if the extension is a WebExtension.
  * @property {boolean} isExperiment - True if the extension uses experiments.
@@ -171,29 +170,29 @@ const TEMPLATES = {
  */
 
 /**
- * A single addon entry from the webext-reports database.
+ * A single Add-on entry from the webext-reports database.
  *
  * @typedef {Object} ReportAddon
  *
- * @property {string} id - The addon GUID.
- * @property {string} name - Display name of the addon.
+ * @property {string} id - The Add-on GUID.
+ * @property {string} name - Display name of the Add-on.
  * @property {Object.<string, string>} icons - Icon URLs keyed by pixel size
  *    (e.g. "32", "64").
  * @property {ReportCompat[]} compat - Compatibility entries across Thunderbird
  *    versions, ordered from newest to oldest.
- * @property {string[]} badges - Badge identifiers assigned to this addon.
+ * @property {string[]} badges - Badge identifiers assigned to this Add-on.
  */
 
 /**
- * The built search index and addon lookup maps produced by buildIndex().
+ * The built search index and Add-on lookup maps produced by buildIndex().
  *
  * @typedef {Object} AddonIndex
  *
  * @property {LunrIndex} idx - The Lunr search index.
- * @property {Object.<string, AddonRecord>} addons - Addon records keyed by
+ * @property {Object.<string, AddonRecord>} addons - Add-on records keyed by
  *    index ref.
- * @property {Map(<string>,<string>)} addonsById - Map of lowercase addon ID
- *    to addon name.
+ * @property {Map(<string>,<string>)} addonsById - Map of lowercase Add-on ID
+ *    to Add-on name.
  */
 
 /**
@@ -328,7 +327,7 @@ async function loadReports() {
 }
 
 /**
- * Builds a Lunr full-text search index and lookup maps from parsed addon data.
+ * Builds a Lunr full-text search index and lookup maps from parsed Add-on data.
  * 
  * @param {YamlEntry[]} data - Array of parsed entry objects.
  *
@@ -355,7 +354,7 @@ function buildIndex(data) {
 }
 
 /**
- * Maps a raw data entry to a structured addon record for indexing and display.
+ * Maps a raw data entry to a structured Add-on record for indexing and display.
  * 
  * @param {YamlEntry} entry - Raw entry object from the parsed data file.
  *
@@ -377,7 +376,7 @@ function process(entry) {
 
 /**
  * Runs a search and renders results into the output element.
- * If the query matches a transmitted addon name not in the local database,
+ * If the query matches a transmitted Add-on name not in the local database,
  * shows a maintained/compat result instead.
  * 
  * @param {string|null} query - The search string, or null to show all addons.
@@ -385,6 +384,12 @@ function process(entry) {
 async function search(query) {
   CONTEXT.replacementsListIntro.hidden = true;
   const isThunderbird = true || navigator.userAgent.split(" ").pop().startsWith("Thunderbird");
+
+  const reportEntry = CONTEXT.report?.addons.find(
+    a => a.name.toLowerCase() === query?.toLowerCase()
+  );
+  const hasUsedVersion = reportEntry?.compat.some(c => c.appVersion === USED_VERSION) ?? false;
+  console.log(reportEntry?.compat);
 
   // Before showing results for the alternative search, check if the add-on is
   // actually compatible and just needs to be updated, or if it still is maintained
@@ -417,10 +422,6 @@ async function search(query) {
     }
   }
 
-  // Use REPORT DB, if available
-  const report = CONTEXT.report.addons.find(a => a.name.includes(query));
-  console.log(report);
-
   let results, out;
   if (query) {
     results = CONTEXT.idx.search('*' + query + '*');
@@ -448,9 +449,9 @@ async function search(query) {
 }
 
 /**
- * Populates the search input's datalist with a set of addon names.
+ * Populates the search input's datalist with a set of Add-on names.
  *
- * @param {Set<string>} names - Set of addon display names to offer as options.
+ * @param {Set<string>} names - Set of Add-on display names to offer as options.
  */
 function setDatalist(names) {
   $('#addon-suggestions').replaceChildren(
@@ -467,8 +468,21 @@ function setDatalist(names) {
  * wires up search event listeners.
  */
 async function init() {
-  await loadVersions();
-  const yamlData = await loadData();
+  const [, yamlData, report] = await Promise.all([
+    loadVersions(),
+    loadData(),
+    loadReports(),
+  ]);
+
+  // Replace r_name with the authoritative name from the report, matched by r_id.
+  const reportById = new Map(report.addons.map(a => [a.id, a]));
+  for (const entry of yamlData) {
+    if (entry.r_id) {
+      const reportAddon = reportById.get(entry.r_id);
+      if (reportAddon) entry.r_name = reportAddon.name;
+    }
+  }
+
   const { idx, addons, addonsById } = buildIndex(yamlData);
 
   let input = $('#searchInput');
@@ -492,6 +506,7 @@ async function init() {
   CONTEXT.exactmatch = exactmatch;
   CONTEXT.outEl = outEl;
   CONTEXT.replacementsListIntro = replacementsListIntro;
+  CONTEXT.report = report;
 
   input.disabled = false;
 
@@ -516,9 +531,11 @@ async function init() {
     search(null);
   }
 
-  // Populate datalist with YAML names.
-  const suggestionNames = new Set(Object.values(addons).map(a => a.name));
-  setDatalist(suggestionNames);
+  // Populate datalist with YAML unmaintained names and all report Add-on names.
+  setDatalist(new Set([
+    ...Object.values(addons).map(a => a.name),
+    ...report.addons.map(a => a.name),
+  ]));
 
   input.focus();
 
@@ -539,20 +556,13 @@ async function init() {
   exactmatch.addEventListener('input', function () {
     search(input.value.trim());
   }, { passive: true });
-
-  // Load the report data after the initial page load.
-  CONTEXT.report = await loadReports();
-
-  // Merge add-on names from the loaded report data into the datalist.
-  for (const a of CONTEXT.report.addons) suggestionNames.add(a.name);
-  setDatalist(suggestionNames);
 }
 
 /**
  * Dispatches to addonResult or generalResult depending on whether the
- * replacement is an ATN addon.
+ * replacement is an Add-on.
  * 
- * @param {AddonRecord} result - The addon record to render.
+ * @param {AddonRecord} result - The Add-on record to render.
  *
  * @returns {DocumentFragment} The rendered result card.
  */
@@ -565,9 +575,9 @@ function resultRow(result) {
 
 
 /**
- * Resolves the display name for an ATN addon.
+ * Resolves the display name for an ATN Add-on.
  *
- * @param {AtnAddon} addon - The ATN addon object.
+ * @param {AtnAddon} addon - The ATN Add-on object.
  * @param {string} [forcedName] - Override name; takes priority if provided.
  *
  * @returns {string} The resolved display name.
@@ -577,13 +587,13 @@ function resolveAddonName(addon, forcedName) {
 }
 
 /**
- * Fetches addon metadata from the ATN API, with IndexedDB caching.
+ * Fetches Add-on metadata from the ATN API, with IndexedDB caching.
  *
- * @param {string} id - The ATN addon ID.
- * @param {string} [forcedName] - Name to use instead of the ATN addon name;
+ * @param {string} id - The Add-on ID.
+ * @param {string} [forcedName] - Name to use instead of the ATN Add-on name;
  *    typically the canonical name from the YAML database.
  *
- * @returns {Promise<{addon: AtnAddon, name: string}>} Resolved ATN addon
+ * @returns {Promise<{addon: AtnAddon, name: string}>} Resolved ATN Add-on
  *    metadata and the display name to use.
  */
 async function getAddonData(id, forcedName) {
@@ -605,11 +615,11 @@ async function getAddonData(id, forcedName) {
 }
 
 /**
- * Renders a result card for a replacement that is an ATN addon, fetching its
- * icon, author, and summary live.
+ * Renders a result card for a replacement that is an Add-on, fetching its icon,
+ *    author, and summary live.
  * 
- * @param {AddonRecord} result - Addon record whose suggested replacement has
- *    an ATN addon ID.
+ * @param {AddonRecord} result - Add-on record whose suggested replacement has
+ *    an Add-on ID.
  * 
  * @returns {DocumentFragment} The rendered result card.
  */
@@ -622,6 +632,7 @@ function addonResult(result) {
   let authorEl = $('.alt-author', el);
   let iconEl = $('.icon', el);
   let descEl = $('.alt-desc', el);
+  let compatEl = $('.compat-info', el);
 
   // Fetch ATN metadata asynchronously and fill in the live nodes once
   // available. The fragment is returned immediately with the static data.
@@ -632,17 +643,36 @@ function addonResult(result) {
       if (addon.summary["en-US"]) {
         descEl.insertAdjacentHTML('afterbegin', addon.summary["en-US"]);
       }
+
+      const reportEntry = CONTEXT.report?.addons.find(
+        a => a.name.toLowerCase() === result.suggested.name.toLowerCase()
+      );
+      if (reportEntry) {
+        const typeOrder = ['current-esr', 'next-esr', 'release'];
+        const entries = typeOrder
+          .map(type => reportEntry.compat.find(c => c.type === type))
+          .filter(Boolean);
+        if (entries.length) {
+          const parts = entries.map(c => {
+            const isESR = c.type !== 'release';
+            const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
+            const compatible = c.extVersion != null;
+            return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
+          });
+          compatEl.innerHTML = parts.join(' ');
+        }
+      }
     }).catch(console.error);
 
   return el;
 }
 
 /**
- * Renders a result card for a replacement that is not an ATN addon (e.g. a
- * built-in feature or external tool).
+ * Renders a result card for a replacement that is not an Add-on (e.g. a built-in
+ *    feature or external tool).
  * 
- * @param {AddonRecord} result - Addon record whose suggested replacement has
- *    a static description instead of an ATN ID.
+ * @param {AddonRecord} result - Add-on record whose suggested replacement has
+ *    a static description instead of an Add-on ID.
  * 
  * @returns {DocumentFragment} The rendered result card.
  */
@@ -676,12 +706,12 @@ function emptyResult(query) {
 }
 
 /**
- * Renders a card indicating the addon is still active, either compatible with
+ * Renders a card indicating the Add-on is still active, either compatible with
  * the current version or not yet updated.
  * 
- * @param {string} query - The addon name.
- * @param {AtnAddon} addon - ATN addon metadata.
- * @param {boolean} isCompatible - True if the addon is compatible with
+ * @param {string} query - The Add-on name.
+ * @param {AtnAddon} addon - ATN Add-on metadata.
+ * @param {boolean} isCompatible - True if the Add-on is compatible with
  *    the user's Thunderbird version.
  * 
  * @returns {DocumentFragment} The rendered maintained-result card.
