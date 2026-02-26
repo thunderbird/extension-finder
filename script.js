@@ -385,7 +385,8 @@ function process(entry) {
 async function search(query) {
   CONTEXT.replacementsListIntro.hidden = true;
   const isThunderbird = true || navigator.userAgent.split(" ").pop().startsWith("Thunderbird");
-
+  USED_VERSION = 148;
+  
   //const reportEntry = CONTEXT.report?.addons.find(
   //  a => a.name.toLowerCase() === query?.toLowerCase()
   //);
@@ -416,8 +417,9 @@ async function search(query) {
     let files = addon?.current_version?.files;
     if (files.length > 0 &&
       (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
+      const reportEntry = CONTEXT.report?.addons.find(a => a.id === addonId);
       CONTEXT.outEl.innerHTML = '';
-      CONTEXT.outEl.appendChild(maintainedResult(query, addon, false));
+      CONTEXT.outEl.appendChild(maintainedResult(query, addon, false, reportEntry));
       return;
     }
   }
@@ -710,21 +712,51 @@ function emptyResult(query) {
 /**
  * Renders a card indicating the Add-on is still active, either compatible with
  * the current version or not yet updated.
- * 
+ *
  * @param {string} query - The Add-on name.
  * @param {AtnAddon} addon - ATN Add-on metadata.
  * @param {boolean} isCompatible - True if the Add-on is compatible with
  *    the user's Thunderbird version.
- * 
+ * @param {ReportAddon} [reportEntry] - Report entry for this add-on; used to
+ *    populate compat info in the notyetcompat card.
+ *
  * @returns {DocumentFragment} The rendered maintained-result card.
  */
-function maintainedResult(query, addon, isCompatible) {
+function maintainedResult(query, addon, isCompatible, reportEntry) {
   let el = cloneTemplate(
     isCompatible ? TEMPLATES.results.compat : TEMPLATES.results.notyetcompat
   );
-  $('.query', el).textContent = query;
+  const queryEl = $('.query', el);
+  if (queryEl) queryEl.textContent = query;
   $('.usedVersion', el).textContent = USED_VERSION;
   $('.button', el).href = addon.current_version.url;
+
+  const iconEl = $('.icon', el);
+  if (iconEl) iconEl.src = addon.icon_url;
+  const nameEl = $('.alt-name', el);
+  if (nameEl) nameEl.textContent = query;
+  const descEl = $('.alt-desc', el);
+  if (descEl && addon.summary?.["en-US"]) descEl.insertAdjacentHTML('afterbegin', addon.summary["en-US"]);
+  const authorEl = $('.alt-author', el);
+  if (authorEl) authorEl.textContent = addon.authors.map(a => a.name).join(', ');
+
+  const compatEl = $('.compat-info', el);
+  if (compatEl && reportEntry) {
+    const typeOrder = ['current-esr', 'next-esr', 'release'];
+    const entries = typeOrder
+      .map(type => reportEntry.compat.find(c => c.type === type))
+      .filter(Boolean);
+    if (entries.length) {
+      const parts = entries.map(c => {
+        const isESR = c.type !== 'release';
+        const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
+        const compatible = c.extVersion != null;
+        return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
+      });
+      compatEl.innerHTML = parts.join(' ');
+    }
+  }
+
   return el;
 }
 
