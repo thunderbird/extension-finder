@@ -375,6 +375,11 @@ async function search(query) {
   CONTEXT.replacementsListIntro.hidden = true;
   CONTEXT.outEl.innerHTML = '';
 
+  const userAgent = navigator.userAgent.split(" ").pop();
+  if (userAgent.startsWith("Thunderbird")) {
+      USED_VERSION = userAgent.split("/").pop().split(".")[0];
+  }
+
   const reportEntry = CONTEXT.report?.addons.find(
     a => a.name.toLowerCase() === query?.toLowerCase()
   );
