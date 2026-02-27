@@ -1,3 +1,5 @@
+import * as idb from './idb-keyval.mjs';
+
 /* global lunr */
 
 // If we consider to use google sheets as data source, these might be useful:
@@ -8,13 +10,196 @@
 // const R_NAME_FIELD = "r_name"; //.gsx$webextensionreplacement.$t,
 // const R_LINK_FIELD = "r_link"; //.gsx$url.$t
 
-// Assume current ESR as current version, if it could not be extracted from user agent.
-var gUsedVersion = 128;
+class StorageWithTTL {
+  // Default to a TTL of 1 day.
+  constructor(ttl = 24 * 60 * 60 * 1000) {
+    this.ttl = ttl;
+  }
 
-// Define how old the latest version of an add-on may be, before it is considered unmaintained.
-const maintainedSpan = 365*24*60*60*1000; // Year
+  async set(key, value) {
+    await idb.set(key, { value, timestamp: Date.now() });
+  }
 
-async function dataToJSON(data) {
+  async get(key) {
+    const entry = await idb.get(key);
+    if (!entry) return null;
+
+    if (Date.now() - entry.timestamp > this.ttl) {
+      await idb.del(key);
+      return null;
+    }
+
+    return entry.value;
+  }
+
+  async del(key) {
+    await idb.del(key);
+  }
+
+  async clear() {
+    await idb.clear();
+  }
+}
+
+// Current Thunderbird version used for compatibility checks. Set dynamically
+// from product-details.mozilla.org; falls back to 128 if the fetch fails.
+let USED_VERSION = "128";
+
+// Define how old the latest version of an add-on may be, before it is
+// considered unmaintained.
+const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
+
+const YAML_URL = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml";
+const PRODUCT_URL = "https://product-details.mozilla.org/1.0/thunderbird_versions.json";
+const REPORT_URL = "https://raw.githubusercontent.com/thunderbird/webext-reports/main/docs/all.json";
+const CONTEXT = {}
+const DB = new StorageWithTTL();
+
+const TEMPLATES = {
+  results: {
+    addon: $('#search-result-addon'),
+    general: $('#search-result-general'),
+    empty: $('#search-result-empty'),
+    compat: $('#search-result-compat'),
+    notyetcompat: $('#search-result-notyetcompat')
+  }
+}
+
+/**
+ * A single result entry returned by a Lunr search query.
+ *
+ * @typedef {Object} LunrSearchResult
+ *
+ * @property {string} ref - The index reference of the matching record.
+ */
+
+/**
+ * Executes a Lunr search query.
+ *
+ * @callback LunrSearchFn
+ *
+ * @param {string} query - The search query string.
+ *
+ * @returns {LunrSearchResult[]} Array of matching results.
+ */
+
+/**
+ * A built Lunr search index.
+ *
+ * @typedef {Object} LunrIndex
+ *
+ * @property {LunrSearchFn} search - Executes a search query and returns
+ *    matching results.
+ */
+
+/**
+ * Raw entry object parsed from data.yaml.
+ *
+ * @typedef {Object} YamlEntry
+ *
+ * @property {string} u_name - Name of the unmaintained add-on.
+ * @property {string} u_id - ID of the unmaintained add-on.
+ * @property {string} r_name - Name of the replacement add-on.
+ * @property {string} r_link - URL for the "Learn more" button (SUMO article
+ *    or ATN add-on page).
+ * @property {string} [r_id] - Add-on ID of the replacement add-on. Mutually
+ *    exclusive with r_desc.
+ * @property {string} [r_desc] - HTML description of a built-in replacement.
+ *    Mutually exclusive with r_id.
+ */
+
+/**
+ * The recommended replacement for an unmaintained add-on.
+ *
+ * @typedef {Object} SuggestedAddon
+ *
+ * @property {string} name - Display name of the replacement.
+ * @property {string} url - URL of the replacement page.
+ * @property {string} [id] - Add-on ID, present when replacement is an add-on.
+ * @property {string} [desc] - HTML description, present when there is no
+ *    replacement add-on, but some other solution.
+ * @property {ReportAddon} [reportEntry] - Report entry for this add-on,
+ *    populated during search.
+ */
+
+/**
+ * Structured record for an unmaintained add-on and its suggested replacement.
+ *
+ * @typedef {Object} AddonRecord
+ *
+ * @property {string} idx - Unique index key (`u_id:r_name`).
+ * @property {string} id - ID of the unmaintained add-on.
+ * @property {string} name - Name of the unmaintained add-on.
+ * @property {SuggestedAddon} suggested - The recommended replacement.
+ */
+
+/**
+ * Subset of ATN API Add-on metadata used by this script.
+ *
+ * @typedef {Object} AtnAddon
+ *
+ * @property {Object.<string, string>} name - Localized Add-on name.
+ * @property {string} icon_url - URL of the Add-on icon.
+ * @property {Object.<string, string>} summary - Localized short description.
+ * @property {Array<{name: string}>} authors - List of authors.
+ * @property {Object} current_version - Current version metadata.
+ * @property {string} current_version.url - URL to the current version page.
+ * @property {Array<{created: string}>} current_version.files - Released files
+ *    for the current version; created is an ISO date string.
+ * @property {Object} current_version.compatibility - Compatibility info.
+ * @property {Object} current_version.compatibility.thunderbird - Thunderbird
+ *    compatibility range.
+ * @property {string} current_version.compatibility.thunderbird.max - Maximum
+ *    compatible Thunderbird version, or "*" for all versions.
+ */
+
+/**
+ * A single compatibility entry from the webext-reports database.
+ *
+ * @typedef {Object} ReportCompat
+ *
+ * @property {string} appVersion - Thunderbird major version (e.g. "128").
+ * @property {string} type - Release type: "release", "current-esr", or "next-esr".
+ * @property {string} [extVersion] - Extension version string, if available.
+ * @property {boolean} isWebExtension - True if the extension is a WebExtension.
+ * @property {boolean} isExperiment - True if the extension uses experiments.
+ * @property {string} [url] - Download URL for this version, if available.
+ */
+
+/**
+ * A single Add-on entry from the webext-reports database.
+ *
+ * @typedef {Object} ReportAddon
+ *
+ * @property {string} id - The add-on ID.
+ * @property {string} name - Display name of the Add-on.
+ * @property {Object.<string, string>} icons - Icon URLs keyed by pixel size
+ *    (e.g. "32", "64").
+ * @property {ReportCompat[]} compat - Compatibility entries across Thunderbird
+ *    versions, ordered from newest to oldest.
+ * @property {string[]} badges - Badge identifiers assigned to this Add-on.
+ */
+
+/**
+ * The built search index and Add-on lookup maps produced by buildIndex().
+ *
+ * @typedef {Object} AddonIndex
+ *
+ * @property {LunrIndex} idx - The Lunr search index.
+ * @property {Object.<string, AddonRecord>} addons - Add-on records keyed by
+ *    index ref.
+ */
+
+/**
+ * Parses a YAML-like flat text format into an array of key/value objects.
+ * Blocks are separated by lines starting with "---"; lines starting with "#"
+ * are ignored.
+ *
+ * @param {string} data - Raw text content to parse.
+ *
+ * @returns {YamlEntry[]} Array of parsed entry objects.
+ */
+function dataToJSON(data) {
   let entries = [];
 
   let lines = data.split(/\r\n|\n/);
@@ -51,31 +236,95 @@ async function dataToJSON(data) {
   return entries;
 }
 
-const templates = {
-  results: {
-    addon: $('#search-result-addon'),
-    general: $('#search-result-general'),
-    empty: $('#search-result-empty'),
-    compat: $('#search-result-compat'),
-    notyetcompat: $('#search-result-notyetcompat')
-  }
+/**
+ * Clones a <template> element's content into a DocumentFragment.
+ *
+ * @param {HTMLTemplateElement} template - The template element to clone.
+ *
+ * @returns {DocumentFragment} The cloned document fragment.
+ */
+function cloneTemplate(template) {
+  return document.importNode(template.content, true);
 }
 
-function stamp(template, cb) {
-  let el = document.importNode(template.content, true);
-  cb(sel => el.querySelector(sel));
-  return el;
-}
-
+/**
+ * Shorthand for querySelector.
+ * 
+ * @param {string} selector - CSS selector.
+ * @param {Document|Element} [parent=document] - Element to query within.
+ * 
+ * @returns {Element|null}
+ */
 function $(selector, parent = document) {
   return parent.querySelector(selector);
 }
 
-async function loadData() {
-  let url = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml"
-  return fetch(url).then(r => r.text()).then(dataToJSON);
+/**
+ * Fetches a URL and parses the response as JSON.
+ *
+ * @param {string} url - URL to fetch.
+ *
+ * @returns {Promise<any>} Parsed JSON response.
+ */
+async function requestJson(url) {
+  const response = await fetch(url);
+  return response.json();
 }
 
+/**
+ * Fetches current Thunderbird version info from product-details.mozilla.org
+ * and updates the global version variables. Falls back to the default
+ * USED_VERSION value if the fetch fails.
+ */
+async function loadVersions() {
+  try {
+    let versions = await DB.get('versions');
+    if (!versions) {
+      versions = await requestJson(PRODUCT_URL);
+      await DB.set('versions', versions);
+    }
+    USED_VERSION = versions.THUNDERBIRD_ESR.split(".")[0];
+  } catch (e) {
+    console.error("Failed to fetch Thunderbird versions:", e);
+  }
+}
+
+/**
+ * Fetches the extension replacement database from GitHub and parses it.
+ *
+ * @returns {Promise<YamlEntry[]>} Array of parsed entry objects.
+ */
+async function loadData() {
+  const cached = await DB.get('yaml');
+  if (cached) return cached;
+
+  const response = await fetch(YAML_URL);
+  const data = dataToJSON(await response.text());
+  await DB.set('yaml', data);
+  return data;
+}
+
+/**
+ * Fetches the webext-reports database from GitHub, with IndexedDB caching.
+ *
+ * @returns {Promise<{addons: ReportAddon[]}>} Parsed reports JSON.
+ */
+async function loadReports() {
+  const cached = await DB.get('reports');
+  if (cached) return cached;
+
+  const reports = await requestJson(REPORT_URL);
+  await DB.set('reports', reports);
+  return reports;
+}
+
+/**
+ * Builds a Lunr full-text search index and lookup maps from parsed Add-on data.
+ * 
+ * @param {YamlEntry[]} data - Array of parsed entry objects.
+ *
+ * @returns {AddonIndex}
+ */
 function buildIndex(data) {
   let b = new lunr.Builder();
 
@@ -83,21 +332,26 @@ function buildIndex(data) {
   b.ref('idx'); // unique index reference
 
   let addons = {};
-  let addonsById = {};
 
   data.forEach(e => { // google sheets will need data.feed.entry.forEach
     let record = process(e);
     b.add(record);
     addons[record.idx] = record;
-    addonsById[record.id.toLowerCase()] = record.name;
   });
 
   let idx = b.build();
-  return { idx, addons, addonsById };
+  return { idx, addons };
 }
 
+/**
+ * Maps a raw data entry to a structured Add-on record for indexing and display.
+ * 
+ * @param {YamlEntry} entry - Raw entry object from the parsed data file.
+ *
+ * @returns {AddonRecord}
+ */
 function process(entry) {
-  let obj = {
+  return {
     idx: `${entry["u_id"]}:${entry["r_name"]}`,
     id: entry["u_id"],
     name: entry["u_name"],
@@ -108,10 +362,121 @@ function process(entry) {
       desc: entry["r_desc"],
     }
   };
-  return obj;
 }
 
-async function init({ idx, addons, addonsById }) {
+/**
+ * Runs a search and renders results into the output element.
+ * If the query exactly matches an Add-on name, shows a maintained/compat result
+ * in addition to possible alternatives.
+ * 
+ * @param {string|null} query - The search string, or null to show all addons.
+ */
+async function search(query) {
+  CONTEXT.replacementsListIntro.hidden = true;
+  CONTEXT.outEl.innerHTML = '';
+
+  const reportEntry = CONTEXT.report?.addons.find(
+    a => a.name.toLowerCase() === query?.toLowerCase()
+  );
+  // If the currently entered name matches an add-on listed in the report DB
+  // (probably selected via auto complete), grab its ID.
+  const addonId = reportEntry?.id;
+
+  // If the user has entered the name of an existing, specific add-on, check if
+  // the add-on is compatible and simply needs to be updated, or if it is still
+  // maintained but not yet compatible.
+  let empty = true;
+  if (addonId) {
+    const addon = await getAddonData(addonId);
+    if (addon) {
+      // Is it compatible? Show info and help to resolve a caching issue?
+      let compat = addon?.current_version?.compatibility?.thunderbird;
+      if (
+        compat &&
+        (!compat.max || compat.max == "*" ||
+          parseInt(compat.max.toString().split(".")[0], 10) >= parseInt(USED_VERSION, 10))
+      ) {
+        CONTEXT.outEl.appendChild(maintainedResult(addon, true, reportEntry));
+        empty = false;
+      } else {
+        // Is it still maintained?
+        let files = addon?.current_version?.files;
+        if (files?.length > 0 &&
+          (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
+          CONTEXT.outEl.appendChild(maintainedResult(addon, false, reportEntry));
+          empty = false;
+        }
+      }
+    }
+  }
+
+  // Show alternatives.
+  let out;
+  if (query) {
+    const results = CONTEXT.idx.search('*' + query + '*');
+    out = results.map(r => CONTEXT.addons[r.ref]);
+    if (CONTEXT.exactmatch.checked) {
+      out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
+    } else {
+      // We do request that each of the entered words is part of the name.
+      let words = query.split(" ").map(word => word.toLowerCase());
+      out = out.filter(f =>
+        words.every(word => f.name.toLowerCase().includes(word)));
+    }
+  } else if (empty) {
+    CONTEXT.replacementsListIntro.hidden = false;
+    out = CONTEXT.allAddons;
+  }
+
+  out.forEach(o => o.suggested.reportEntry = CONTEXT.report?.addons.find(
+    a => a.id === o.suggested.id
+  ));
+  out = out.filter(o => !o.suggested.reportEntry || o.suggested.reportEntry.compat.filter(c => c.extVersion).length);
+
+  if (out.length) {
+    out.forEach(r => CONTEXT.outEl.appendChild(resultRow(r)));
+  } else if (empty) {
+    CONTEXT.outEl.appendChild(emptyResult(query));
+  }
+}
+
+/**
+ * Populates the search input's datalist with a set of Add-on names.
+ *
+ * @param {Set<string>} names - Set of Add-on display names to offer as options.
+ */
+function setDatalist(names) {
+  $('#addon-suggestions').replaceChildren(
+    ...[...names].map(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      return opt;
+    })
+  );
+}
+
+/**
+ * Initialises the UI: resolves URL parameters, fetches ATN data if needed, and
+ * wires up search event listeners.
+ */
+async function init() {
+  const [, yamlData, report] = await Promise.all([
+    loadVersions(),
+    loadData(),
+    loadReports(),
+  ]);
+
+  // Replace r_name with the authoritative name from the report, matched by r_id.
+  const reportById = new Map(report.addons.map(a => [a.id, a]));
+  for (const entry of yamlData) {
+    if (entry.r_id) {
+      const reportAddon = reportById.get(entry.r_id);
+      if (reportAddon) entry.r_name = reportAddon.name;
+    }
+  }
+
+  const { idx, addons } = buildIndex(yamlData);
+
   let input = $('#searchInput');
   input.setAttribute('placeholder', 'name of unmaintained extension');
 
@@ -119,118 +484,79 @@ async function init({ idx, addons, addonsById }) {
   let exactmatch = $('#exactMatch');
   let replacementsListIntro = $('#replacementsListIntro');
 
-  let allAddons = Object.values(addons).sort((a, b) => (a.name.toLowerCase() > b.name.toLowerCase()) ? 1 : -1);
-
-  function search(query) {
-    replacementsListIntro.hidden = true;
-
-    // Show help about updating add-ons instead of searching for results.
-    if (query && transmitted_addon_name && query == transmitted_addon_name) {
-      // transmitted_addon_name is set, 
-      // - if this has been called from Thunderbird,
-      // - if we do not have a database entry for the requested add-on
-
-      // Is it compatible and therefore this call a caching issue?
-      let compat = addon?.current_version?.compatibility?.thunderbird;
-      if (
-        compat &&
-        (!compat.max || compat.max == "*" || parseInt(compat.max.toString().split(".")[0], 10) >= gUsedVersion)
-      ) {
-        outEl.innerHTML = '';
-        outEl.appendChild(maintainedResult(query, addon, true));
-        return;
-      }
-
-      // Is it still maintained?
-      let files = addon?.current_version?.files;
-      if (files.length > 0 && (new Date() - new Date(files[0].created)) < maintainedSpan) {
-        outEl.innerHTML = '';
-        outEl.appendChild(maintainedResult(query, addon, false));
-        return;
-      }
-    }
-
-    let results, out;
-    if (query) {
-      results = idx.search('*' + query + '*');
-      out = results.map(r => addons[r.ref]);
-      if (exactmatch.checked) {
-        out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
-      } else {
-        // We do request that each of the entered words is part of the name.
-        let words = query.split(" ").map(word => word.toLowerCase());
-        out = out.filter(f => words.every(word => f.name.toLowerCase().includes(word)));
-      }
-    } else {      
-      replacementsListIntro.hidden = false;
-      out = allAddons;
-    }
-
-    outEl.innerHTML = '';
-
-    if (out.length) {
-      out.forEach(r => outEl.appendChild(resultRow(r)));
-    } else {
-      outEl.appendChild(emptyResult(query));
-    }
-  }
+  let allAddons = Object.values(addons).sort((a, b) =>
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
   let loc = new URL(window.location);
-  let query = loc.searchParams.get("q");
-  if (query) query = decodeURIComponent(query);
+  let queryName = loc.searchParams.get("q");
+  if (queryName) queryName = decodeURIComponent(queryName);
 
-  let addon = null;
-  let transmitted_addon_name = null;
-
-  // Extract used version from user agent.
-  let userAgent = navigator.userAgent.split(" ").pop();
-  if (userAgent.startsWith("Thunderbird")) {
-      gUsedVersion = userAgent.split("/").pop().split(".")[0];
-
-      let id = loc.searchParams.get("id");
-      if (id) {
-        id = decodeURIComponent(id);
-        exactmatch.checked = true;
-    
-        if (addonsById.hasOwnProperty(id.toLowerCase())) {
-          // Alter the entered name to match the stored add-on name associated with that ID.
-          query = addonsById[id.toLowerCase()];
-        } else {
-          // Not in our database, try to flip to a name provided by ATN.
-          addon = await getAddonData(id);
-          if (addon && addon.name) {
-            query = addon.name["en-US"] ? addon.name["en-US"] : Object.values(addon.name)[0];
-          }
-          // Store the used name, so search can fallback to the advanced information
-          // available for the linked addon.
-          transmitted_addon_name = query;
-        }
-      }      
-  }
-  
-  
-
-
-  input.addEventListener('input', function (e) {
-    search(input.value.trim());
-  }, { passive: true });
-
-  exactmatch.addEventListener('input', function (e) {
-    search(input.value.trim());
-  }, { passive: true });
+  // Assign global CONTEXT
+  CONTEXT.idx = idx;
+  CONTEXT.addons = addons;
+  CONTEXT.allAddons = allAddons;
+  CONTEXT.exactmatch = exactmatch;
+  CONTEXT.outEl = outEl;
+  CONTEXT.replacementsListIntro = replacementsListIntro;
+  CONTEXT.report = report;
 
   input.disabled = false;
 
-  if (query) {
-    input.value = query;
-    search(query);
+  // The extension finder can be called with an id, which triggers an exact match,
+  // and a compatibility check on the given add-on. We also enforce the query to
+  // use an official name.
+  let queryId = loc.searchParams.get("id")?.toLowerCase();
+  if (queryId) {
+    queryId = decodeURIComponent(queryId);
+    exactmatch.checked = true;
+
+    const addon = await getAddonData(queryId);
+    const name = resolveAddonName(addon);
+
+    input.value = name;
+    search(name);
+  } else if (queryName) {
+    input.value = queryName;
+    search(queryName);
   } else {
-    search();
+    search(null);
   }
 
+  // Populate datalist with YAML unmaintained names and all report Add-on names.
+  setDatalist(new Set([
+    ...Object.values(addons).map(a => a.name),
+    ...report.addons.map(a => a.name),
+  ]));
+
   input.focus();
+
+  input.addEventListener('input', function () {
+    // Update datalist visibility. Hide the datalist dropdown when the input
+    // already exactly matches the only remaining suggestion.
+    const val = input.value.trim();
+    const opts = [...$('#addon-suggestions').options];
+    const matches = opts.filter(o => o.value.toLowerCase().includes(val.toLowerCase()));
+    if (matches.length === 1 && matches[0].value.toLowerCase() === val.toLowerCase()) {
+      input.removeAttribute('list');
+    } else {
+      input.setAttribute('list', 'addon-suggestions');
+    }
+    search(val);
+  }, { passive: true });
+
+  exactmatch.addEventListener('input', function () {
+    search(input.value.trim());
+  }, { passive: true });
 }
 
+/**
+ * Dispatches to addonResult or generalResult depending on whether the
+ * replacement is an Add-on.
+ * 
+ * @param {AddonRecord} result - The Add-on record to render.
+ *
+ * @returns {DocumentFragment} The rendered result card.
+ */
 function resultRow(result) {
   if (result.suggested.id) {
     return addonResult(result);
@@ -238,77 +564,181 @@ function resultRow(result) {
   return generalResult(result);
 }
 
-let cachedAddons = {};
 
-function getAddonData(id) {
-  return new Promise((resolve, reject) => {
-    if (id in cachedAddons) {
-      resolve(cachedAddons[id]);
-    } else {
-      let p = fetch(`https://addons.thunderbird.net/api/v4/addons/addon/${id}/`).then(r => r.json())
-      p.then(data => cachedAddons[id] = p);
-      resolve(p);
-    }
-  });
+/**
+ * Resolves the display name for an ATN Add-on.
+ *
+ * @param {AtnAddon} addon - The ATN Add-on object.
+ *
+ * @returns {string|undefined} The resolved display name.
+ */
+function resolveAddonName(addon) {
+  return addon?.name?.["en-US"] ?? Object.values(addon?.name ?? {})[0];
 }
 
-function addonResult(result) {
-  return stamp(templates.results.addon, $ => {
-    $('.legacy-name').textContent = result.name;
-    $('.alt-name').textContent = result.suggested.name;
-    $('.cta .button').setAttribute('href', result.suggested.url);
-
-    let authorEl = $('.alt-author');
-    let iconEl = $('.icon');
-    let descEl = $('.alt-desc');
-
-    getAddonData(result.suggested.id)
-      .then(data => {
-        authorEl.textContent = data.authors.map(a => a.name).join(', ');
-        iconEl.src = data.icon_url;
-        if (data.summary["en-US"]) {
-          descEl.insertAdjacentHTML('afterbegin', data.summary["en-US"]);
-        }
-      }).catch(console.error);
-  });
+/**
+ * Resolves the display summary for an ATN Add-on, falling back to the first
+ * available locale if "en-US" is not present.
+ *
+ * @param {AtnAddon} addon - The ATN Add-on object.
+ *
+ * @returns {string|undefined} The resolved summary string, or undefined.
+ */
+function resolveAddonSummary(addon) {
+  return addon?.summary?.["en-US"] ?? Object.values(addon?.summary ?? {})[0];
 }
 
-function generalResult(result) {
-  return stamp(templates.results.general, $ => {
-    $('.legacy-name').textContent = result.name;
-    $('.alt-name').textContent = result.suggested.name;
-    $('.cta .button').setAttribute('href', result.suggested.url);
-
-    if (result.suggested.desc) {
-      $('.alt-desc').insertAdjacentHTML('afterbegin', result.suggested.desc);
-    }
-  });
-}
-
-function emptyResult(query) {
-  return stamp(templates.results.empty, $ => {
-    $('.query').textContent = query;
-    $('.button').href = `https://addons.thunderbird.net/search/?q=${query}&appver=${gUsedVersion}.0`;
-  });
-}
-
-function maintainedResult(query, addon, isCompatible) {
-  if (isCompatible) {
-    return stamp(templates.results.compat, $ => {
-      $('.query').textContent = query;
-      $('.usedVersion').textContent = gUsedVersion;
-      $('.button').href = addon.current_version.url;
+/**
+ * Renders compatibility info into a .compat-info element.
+ *
+ * @param {Element|null} compatEl - The element to render into.
+ * @param {ReportAddon} [reportEntry] - The report entry to render.
+ */
+function renderCompatInfo(compatEl, reportEntry) {
+  if (!compatEl || !reportEntry) return;
+  const typeOrder = ['current-esr', 'next-esr', 'release'];
+  const entries = typeOrder
+    .map(type => reportEntry.compat.find(c => c.type === type))
+    .filter(Boolean);
+  if (entries.length) {
+    const parts = entries.map(c => {
+      const isESR = c.type !== 'release';
+      const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
+      const compatible = c.extVersion != null;
+      return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
     });
+    compatEl.innerHTML = parts.join(' ');
+  }
+}
+
+/**
+ * Fetches Add-on metadata from the ATN API, with IndexedDB caching.
+ *
+ * @param {string} id - The Add-on ID.
+ *
+ * @returns {Promise<AtnAddon>} Resolved ATN Add-on metadata.
+ */
+async function getAddonData(id) {
+  const cached = await DB.get(`addon:${id}`);
+  if (cached) {
+    return cached;
   }
 
-  return stamp(templates.results.notyetcompat, $ => {
-    $('.query').textContent = query;
-    $('.usedVersion').textContent = gUsedVersion;
-    $('.button').href = addon.current_version.url;
-  });
+  const addon = await requestJson(
+    `https://addons.thunderbird.net/api/v4/addons/addon/${id}/`
+  );
+  await DB.set(`addon:${id}`, addon);
+  return addon;
 }
 
+/**
+ * Renders a result card for a replacement that is an Add-on, fetching its icon,
+ *    author, and summary live.
+ * 
+ * @param {AddonRecord} result - Add-on record whose suggested replacement has
+ *    an Add-on ID.
+ * 
+ * @returns {DocumentFragment} The rendered result card.
+ */
+function addonResult(result) {
+  let el = cloneTemplate(TEMPLATES.results.addon);
+  $('.legacy-name', el).textContent = result.name;
+  $('.alt-name', el).textContent = result.suggested.name;
+  $('.cta .button', el).setAttribute('href', result.suggested.url);
+
+  let authorEl = $('.alt-author', el);
+  let iconEl = $('.icon', el);
+  let descEl = $('.alt-desc', el);
+  let compatEl = $('.compat-info', el);
+
+  // Fetch ATN metadata asynchronously and fill in the live nodes once
+  // available. The fragment is returned immediately with the static data.
+  getAddonData(result.suggested.id)
+    .then(addon => {
+      authorEl.textContent = addon.authors.map(a => a.name).join(', ');
+      iconEl.src = addon.icon_url;
+      const summary = resolveAddonSummary(addon);
+      if (summary) {
+        descEl.insertAdjacentHTML('afterbegin', summary);
+      }
+
+      renderCompatInfo(compatEl, result.suggested.reportEntry);
+    }).catch(console.error);
+
+  return el;
+}
+
+/**
+ * Renders a result card for a replacement that is not an Add-on (e.g. a built-in
+ *    feature or external tool).
+ * 
+ * @param {AddonRecord} result - Add-on record whose suggested replacement has
+ *    a static description instead of an Add-on ID.
+ * 
+ * @returns {DocumentFragment} The rendered result card.
+ */
+function generalResult(result) {
+  let el = cloneTemplate(TEMPLATES.results.general);
+  $('.legacy-name', el).textContent = result.name;
+  $('.alt-name', el).textContent = result.suggested.name;
+  $('.cta .button', el).setAttribute('href', result.suggested.url);
+
+  if (result.suggested.desc) {
+    $('.alt-desc', el).insertAdjacentHTML('afterbegin', result.suggested.desc);
+  }
+
+  return el;
+}
+
+/**
+ * Renders a "no results" card.
+ * 
+ * @param {string} query - The search string that yielded no results.
+ * 
+ * @returns {DocumentFragment} The rendered empty-result card.
+ */
+function emptyResult(query) {
+  let el = cloneTemplate(TEMPLATES.results.empty);
+  $('.query', el).textContent = query;
+  //$('.button', el).href =
+  //  `https://addons.thunderbird.net/search/?q=${query}&appver=${USED_VERSION}.0`;
+  return el;
+}
+
+/**
+ * Renders a card indicating the Add-on is still active, either compatible with
+ * the current version or not yet updated.
+ *
+ * @param {AtnAddon} addon - ATN Add-on metadata.
+ * @param {boolean} isCompatible - True if the Add-on is compatible with
+ *    the user's Thunderbird version.
+ * @param {ReportAddon} [reportEntry] - Report entry for this add-on; used to
+ *    populate compat info.
+ *
+ * @returns {DocumentFragment} The rendered maintained-result card.
+ */
+function maintainedResult(addon, isCompatible, reportEntry) {
+  let el = cloneTemplate(
+    isCompatible ? TEMPLATES.results.compat : TEMPLATES.results.notyetcompat
+  );
+  $('.usedVersion', el).textContent = USED_VERSION;
+  $('.button', el).href = addon.current_version.url;
+
+  const iconEl = $('.icon', el);
+  if (iconEl) iconEl.src = addon.icon_url;
+  const nameEl = $('.alt-name', el);
+  if (nameEl) nameEl.textContent = resolveAddonName(addon);
+  const descEl = $('.alt-desc', el);
+  const summary = resolveAddonSummary(addon);
+  if (descEl && summary) descEl.insertAdjacentHTML('afterbegin', summary);
+  const authorEl = $('.alt-author', el);
+  if (authorEl) authorEl.textContent = addon.authors.map(a => a.name).join(', ');
+
+  renderCompatInfo($('.compat-info', el), reportEntry);
+
+  return el;
+}
 
 window.addEventListener('load', function (e) {
-  loadData().then(buildIndex).then(init);
+  init();
 });

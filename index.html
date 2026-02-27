@@ -13,6 +13,7 @@
         Find alternatives to no longer maintained Thunderbird extensions
       </h1>
       <input id="searchInput" class="search" disabled placeholder="loading data...">
+      <datalist id="addon-suggestions"></datalist>
       <div class="smallprint">
         <label><input type="checkbox" id="exactMatch" value="value">Show only exact matches.</label>
       </div>
@@ -30,8 +31,9 @@
               <img class="icon">
               <div class="info">
                 <h3 class="alt-name"></h3>
-                <p class="alt-desc"></p>                
+                <p class="alt-desc"></p>
                 <div class="byline">by <span class="alt-author"></span></div>
+                <div class="compat-info byline"></div>
               </div>
               <div class="cta">
                 <a class="button">Learn More</a>
@@ -59,35 +61,58 @@
         <template id="search-result-empty">
           <li class="noresults">
             <h2>
-              No results found for &ldquo;<span class="query"></span>&rdquo;
+              No alternatives found for &ldquo;<span class="query"></span>&rdquo;
             </h2>
-            <a class="button">search addons.thunderbird.net ➡</a>
+            <!--a class="button">search addons.thunderbird.net ➡</a-->
           </li>
         </template>
         <template id="search-result-compat">
-          <li class="noresults">
-            <h2>
-              The add-on &ldquo;<span class="query"></span>&rdquo; seems to be maintained and is compatible with Thunderbird <span class="usedVersion"></span>.
-            </h2>
-            <a class="button">Show Add-on</a>
-            <div class="help">
-              <p>Directly after updating Thunderbird, it is however possible that the add-on is still marked as incompatible. Either the add-on manager did not update the displayed information after the automatic add-on update (re-opening the add-on manger should fix that), or the automatic update check failed due to a connection timeout to addons.thunderbird.net.</p>             
+          <li>
+            <div class="note">
+              The add-on seems to be maintained and is compatible with Thunderbird <span class="usedVersion"></span>.
+            </div>
+            <div class="alternative">
+              <img class="icon">
+              <div class="info">
+                <h3 class="alt-name"></h3>
+                <p class="alt-desc"></p>
+                <div class="byline">by <span class="alt-author"></span></div>
+                <div class="compat-info byline"></div>
+              </div>
+              <div class="cta">
+                <a class="button">Show Add-on</a>
+              </div>
+            </div>
+            <details class="help">
+              <summary>Still showing as incompatible?</summary>
+              <p>Directly after updating Thunderbird, it is possible that the add-on is still marked as incompatible. Either the add-on manager did not update the displayed information after the automatic add-on update (re-opening the add-on manger should fix that), or the automatic update check failed due to a connection timeout to addons.thunderbird.net.</p>
               <p>Manually search for add-on updates by clicking on the gear menu in the add-on manager as shown below.</p>
               <img src="update-addons.png"/>
-            </div>
+            </details>
           </li>
         </template>
         <template id="search-result-notyetcompat">
-          <li class="noresults">
-            <h2>
-              The add-on &ldquo;<span class="query"></span>&rdquo; seems to be maintained, but a version for Thunderbird <span class="usedVersion"></span> has not yet been released.
-            </h2>
-            <a class="button">Show Add-on</a>
+          <li>
+            <div class="note">
+              The add-on seems to be maintained, but a version for Thunderbird <span class="usedVersion"></span> has not yet been released.
+            </div>
+            <div class="alternative">
+              <img class="icon">
+              <div class="info">
+                <h3 class="alt-name"></h3>
+                <p class="alt-desc"></p>
+                <div class="byline">by <span class="alt-author"></span></div>
+                <div class="compat-info byline"></div>
+              </div>
+              <div class="cta">
+                <a class="button">Show Add-on</a>
+              </div>
+            </div>
           </li>
         </template>
       </ul>
     </section>
     <script src="lunr.min.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js" type="module"></script>
   </body>
 </html>
