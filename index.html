@@ -10,15 +10,12 @@
   <body>
     <section>
       <h1>
-        Find alternatives to no longer maintained Thunderbird extensions
+        Find alternatives for extensions incompatible with the most recent version of Thunderbird.
       </h1>
-      <input id="searchInput" class="search" disabled placeholder="loading data...">
+      <input id="extensionFinderSearchInput" class="search" disabled placeholder="loading data...">
       <datalist id="addon-suggestions"></datalist>
-      <div class="smallprint">
-        <label><input type="checkbox" id="exactMatch" value="value">Show only exact matches.</label>
-      </div>
       <div class="smallprint" id="replacementsListIntro" hidden="true">
-        <p>Following are recommended replacements for no longer maintained extensions that have suitable alternatives.</p>
+        <p>The following are recommended replacements for extensions that may not work in the most recent version of Thunderbird.</p>
       </div>
       <ul class="out">
         <template id="search-result-addon">
@@ -61,15 +58,14 @@
         <template id="search-result-empty">
           <li class="noresults">
             <h2>
-              No alternatives found for &ldquo;<span class="query"></span>&rdquo;
+              No alternatives found.
             </h2>
-            <!--a class="button">search addons.thunderbird.net ➡</a-->
           </li>
         </template>
         <template id="search-result-compat">
           <li>
             <div class="note">
-              The add-on seems to be maintained and is compatible with Thunderbird <span class="usedVersion"></span>.
+              The add-on seems to be maintained and is compatible with <span class="compatVersion"></span>.
             </div>
             <div class="alternative">
               <img class="icon">
@@ -94,7 +90,26 @@
         <template id="search-result-notyetcompat">
           <li>
             <div class="note">
-              The add-on seems to be maintained, but a version for Thunderbird <span class="usedVersion"></span> has not yet been released.
+              The add-on seems to be maintained, but a compatible version has not yet been released.
+            </div>
+            <div class="alternative">
+              <img class="icon">
+              <div class="info">
+                <h3 class="alt-name"></h3>
+                <p class="alt-desc"></p>
+                <div class="byline">by <span class="alt-author"></span></div>
+                <div class="compat-info byline"></div>
+              </div>
+              <div class="cta">
+                <a class="button">Show Add-on</a>
+              </div>
+            </div>
+          </li>
+        </template>
+        <template id="search-result-notfullycompat">
+          <li>
+            <div class="note">
+              The add-on seems to be maintained, but requires <span class="compatVersion"></span>.
             </div>
             <div class="alternative">
               <img class="icon">

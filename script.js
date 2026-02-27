@@ -10,6 +10,11 @@ import * as idb from './idb-keyval.mjs';
 // const R_NAME_FIELD = "r_name"; //.gsx$webextensionreplacement.$t,
 // const R_LINK_FIELD = "r_link"; //.gsx$url.$t
 
+// TODO: Check for error when add-on name has ":" in its name.
+// TODO: Do we have the compat information for a given version for suggestions,
+//       if the user is not using ESR or Release.
+
+
 class StorageWithTTL {
   // Default to a TTL of 1 day.
   constructor(ttl = 24 * 60 * 60 * 1000) {
@@ -41,10 +46,6 @@ class StorageWithTTL {
   }
 }
 
-// Current Thunderbird version used for compatibility checks. Set dynamically
-// from product-details.mozilla.org; falls back to 128 if the fetch fails.
-let USED_VERSION = "128";
-
 // Define how old the latest version of an add-on may be, before it is
 // considered unmaintained.
 const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
@@ -61,6 +62,7 @@ const TEMPLATES = {
     general: $('#search-result-general'),
     empty: $('#search-result-empty'),
     compat: $('#search-result-compat'),
+    notfullycompat: $('#search-result-notfullycompat'),
     notyetcompat: $('#search-result-notyetcompat')
   }
 }
@@ -149,6 +151,8 @@ const TEMPLATES = {
  * @property {Object} current_version.compatibility - Compatibility info.
  * @property {Object} current_version.compatibility.thunderbird - Thunderbird
  *    compatibility range.
+ * @property {string} current_version.compatibility.thunderbird.min - Minimum
+ *    required Thunderbird version.
  * @property {string} current_version.compatibility.thunderbird.max - Maximum
  *    compatible Thunderbird version, or "*" for all versions.
  */
@@ -272,9 +276,7 @@ async function requestJson(url) {
 }
 
 /**
- * Fetches current Thunderbird version info from product-details.mozilla.org
- * and updates the global version variables. Falls back to the default
- * USED_VERSION value if the fetch fails.
+ * Fetches current Thunderbird version info from product-details.mozilla.org.
  */
 async function loadVersions() {
   try {
@@ -283,7 +285,6 @@ async function loadVersions() {
       versions = await requestJson(PRODUCT_URL);
       await DB.set('versions', versions);
     }
-    USED_VERSION = versions.THUNDERBIRD_ESR.split(".")[0];
   } catch (e) {
     console.error("Failed to fetch Thunderbird versions:", e);
   }
@@ -366,77 +367,83 @@ function process(entry) {
 
 /**
  * Runs a search and renders results into the output element.
- * If the query exactly matches an Add-on name, shows a maintained/compat result
- * in addition to possible alternatives.
- * 
- * @param {string|null} query - The search string, or null to show all addons.
+ * If a reportEntry is provided, shows a compat/maintained card first and
+ * filters YAML alternatives by its add-on ID. Otherwise performs a fuzzy
+ * search on the query string, or shows all add-ons if both are absent.
+ *
+ * @param {Object} [searchParams={}] - Search parameters.
+ * @param {ReportAddon} [searchParams.reportEntry] - Report entry for the
+ *    add-on the user selected; triggers an exact-match flow.
+ * @param {string} [searchParams.query] - Free-text search string. Ignored
+ *    when reportEntry is provided.
  */
-async function search(query) {
+async function search(searchParams = {}) {
+  const { reportEntry, query } = searchParams;
+
   CONTEXT.replacementsListIntro.hidden = true;
   CONTEXT.outEl.innerHTML = '';
 
-  const reportEntry = CONTEXT.report?.addons.find(
-    a => a.name.toLowerCase() === query?.toLowerCase()
-  );
-  // If the currently entered name matches an add-on listed in the report DB
-  // (probably selected via auto complete), grab its ID.
-  const addonId = reportEntry?.id;
-
   // If the user has entered the name of an existing, specific add-on, check if
-  // the add-on is compatible and simply needs to be updated, or if it is still
+  // it is compatible and simply needs to be updated, or if it is still
   // maintained but not yet compatible.
-  let empty = true;
-  if (addonId) {
-    const addon = await getAddonData(addonId);
+  if (reportEntry) {
+    const addon = await getAddonData(reportEntry.id);
     if (addon) {
       // Is it compatible? Show info and help to resolve a caching issue?
       let compat = addon?.current_version?.compatibility?.thunderbird;
       if (
         compat &&
         (!compat.max || compat.max == "*" ||
-          parseInt(compat.max.toString().split(".")[0], 10) >= parseInt(USED_VERSION, 10))
+          parseInt(compat.max.toString().split(".")[0], 10) >= CONTEXT.usedVersionInt) &&
+        (!compat.min ||
+          parseInt(compat.min.toString().split(".")[0], 10) <= CONTEXT.usedVersionInt)
       ) {
         CONTEXT.outEl.appendChild(maintainedResult(addon, true, reportEntry));
-        empty = false;
       } else {
         // Is it still maintained?
         let files = addon?.current_version?.files;
         if (files?.length > 0 &&
           (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
           CONTEXT.outEl.appendChild(maintainedResult(addon, false, reportEntry));
-          empty = false;
         }
       }
     }
   }
 
   // Show alternatives.
-  let out;
-  if (query) {
-    const results = CONTEXT.idx.search('*' + query + '*');
-    out = results.map(r => CONTEXT.addons[r.ref]);
-    if (CONTEXT.exactmatch.checked) {
-      out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
-    } else {
-      // We do request that each of the entered words is part of the name.
-      let words = query.split(" ").map(word => word.toLowerCase());
-      out = out.filter(f =>
-        words.every(word => f.name.toLowerCase().includes(word)));
-    }
-  } else if (empty) {
+  let alternatives = [];
+  if (reportEntry) {
+    updateQueryInUrl("id", reportEntry.id);
+    // If we have a reportEntry, we have an exact match and do not use LUNR.
+    alternatives.push(
+      ...Object.values(CONTEXT.addons).filter(a => a.id == reportEntry.id)
+    );
+  } else if (query) {
+    updateQueryInUrl("q", query);
+    // We do request that each of the entered words is part of the name.
+    let words = query.split(" ").map(word => word.toLowerCase());
+    const results = CONTEXT.idx.search('*' + query + '*')
+      .map(r => CONTEXT.addons[r.ref])
+      .filter(f => words.every(word => f.name.toLowerCase().includes(word)));
+    alternatives.push(...results);
+  } else {
+    updateQueryInUrl();
+    // Show all addons if search did not specify a query or a reportEntry.
     CONTEXT.replacementsListIntro.hidden = false;
-    out = CONTEXT.allAddons;
+    alternatives.push(...CONTEXT.allAddons);
   }
 
-  out.forEach(o => o.suggested.reportEntry = CONTEXT.report?.addons.find(
+  // Supress alternatives, which are no longer compatible.
+  alternatives.forEach(o => o.suggested.reportEntry = CONTEXT.report?.addons.find(
     a => a.id === o.suggested.id
   ));
-  out = out.filter(o => !o.suggested.reportEntry || o.suggested.reportEntry.compat.filter(c => c.extVersion).length);
+  alternatives = alternatives.filter(o => !o.suggested.reportEntry || o.suggested.reportEntry.compat.filter(c => c.extVersion).length);
 
-  if (out.length) {
-    out.forEach(r => CONTEXT.outEl.appendChild(resultRow(r)));
-  } else if (empty) {
-    CONTEXT.outEl.appendChild(emptyResult(query));
+  // Append found alternatives, or the empty result card.
+  if (alternatives.length) {
+    alternatives.forEach(r => CONTEXT.outEl.appendChild(resultRow(r)));
+  } else {
+    CONTEXT.outEl.appendChild(emptyResult());
   }
 }
 
@@ -453,6 +460,22 @@ function setDatalist(names) {
       return opt;
     })
   );
+}
+
+/**
+ * Updates the browser URL bar to reflect the current search state without
+ * triggering a navigation. Clears all query parameters if no key/value is
+ * provided.
+ *
+ * @param {string} [key] - Query parameter name to set (e.g. "q" or "id").
+ * @param {string} [value] - Query parameter value.
+ */
+function updateQueryInUrl(key, value) {
+  const url = new URL(window.location.origin + window.location.pathname);
+  if (key && value && value.trim() !== "") {
+    url.searchParams.set(key, value);
+  }
+  history.replaceState(null, "", url.href);
 }
 
 /**
@@ -477,11 +500,10 @@ async function init() {
 
   const { idx, addons } = buildIndex(yamlData);
 
-  let input = $('#searchInput');
-  input.setAttribute('placeholder', 'name of unmaintained extension');
+  let input = $('#extensionFinderSearchInput');
+  input.setAttribute('placeholder', 'name of an extension');
 
   let outEl = $('.out');
-  let exactmatch = $('#exactMatch');
   let replacementsListIntro = $('#replacementsListIntro');
 
   let allAddons = Object.values(addons).sort((a, b) =>
@@ -495,32 +517,19 @@ async function init() {
   CONTEXT.idx = idx;
   CONTEXT.addons = addons;
   CONTEXT.allAddons = allAddons;
-  CONTEXT.exactmatch = exactmatch;
   CONTEXT.outEl = outEl;
   CONTEXT.replacementsListIntro = replacementsListIntro;
   CONTEXT.report = report;
 
+  // If running inside Thunderbird, override usedVersion with the actual
+  // running version rather than the product-details value.
+  const lastUAToken = navigator.userAgent.split(" ").pop();
+  const versionString = lastUAToken.startsWith("Thunderbird")
+    ? lastUAToken.split("/").pop()
+    : await DB.get("versions").then(v => v?.THUNDERBIRD_ESR) ?? "128";
+  CONTEXT.usedVersion = versionString.split(".")[0];
+  CONTEXT.usedVersionInt = parseInt(CONTEXT.usedVersion, 10);
   input.disabled = false;
-
-  // The extension finder can be called with an id, which triggers an exact match,
-  // and a compatibility check on the given add-on. We also enforce the query to
-  // use an official name.
-  let queryId = loc.searchParams.get("id")?.toLowerCase();
-  if (queryId) {
-    queryId = decodeURIComponent(queryId);
-    exactmatch.checked = true;
-
-    const addon = await getAddonData(queryId);
-    const name = resolveAddonName(addon);
-
-    input.value = name;
-    search(name);
-  } else if (queryName) {
-    input.value = queryName;
-    search(queryName);
-  } else {
-    search(null);
-  }
 
   // Populate datalist with YAML unmaintained names and all report Add-on names.
   setDatalist(new Set([
@@ -529,6 +538,34 @@ async function init() {
   ]));
 
   input.focus();
+
+  // The extension finder can be called with an id, which performs an exact search.
+  let queryId = loc.searchParams.get("id")?.toLowerCase();
+  if (queryId) {
+    const reportEntry = CONTEXT.report?.addons.find(
+      a => a.id.toLowerCase() === queryId?.toLowerCase()
+    );
+    if (reportEntry) {
+      input.value = reportEntry.name;
+      search({ reportEntry });
+    } else {
+      input.value = "";
+      search();
+    }
+  } else if (queryName) {
+    input.value = queryName;
+    const reportEntry = CONTEXT.report?.addons.find(
+      a => a.name.toLowerCase() === queryName?.toLowerCase()
+    );
+    if (reportEntry) {
+      search({ reportEntry });
+    } else {
+      search({ query: queryName });
+    }
+  } else {
+    input.value = "";
+    search();
+  }
 
   input.addEventListener('input', function () {
     // Update datalist visibility. Hide the datalist dropdown when the input
@@ -541,11 +578,21 @@ async function init() {
     } else {
       input.setAttribute('list', 'addon-suggestions');
     }
-    search(val);
-  }, { passive: true });
 
-  exactmatch.addEventListener('input', function () {
-    search(input.value.trim());
+    // If the currently entered name is empty or matches an add-on listed in the
+    // report DB (probably selected via auto complete), update page history.
+    if (!val) {
+      search();
+    } else {
+      const reportEntry = CONTEXT.report?.addons.find(
+        a => a.name.toLowerCase() === val?.toLowerCase()
+      );
+      if (reportEntry) {
+        search({ reportEntry });
+      } else {
+        search({ query: val });
+      }
+    }
   }, { passive: true });
 }
 
@@ -589,20 +636,22 @@ function resolveAddonSummary(addon) {
 }
 
 /**
- * Renders compatibility info into a .compat-info element.
+ * Renders compatibility info into a .compat-info element. Entries are shown
+ * in ascending version order.
  *
  * @param {Element|null} compatEl - The element to render into.
  * @param {ReportAddon} [reportEntry] - The report entry to render.
  */
 function renderCompatInfo(compatEl, reportEntry) {
   if (!compatEl || !reportEntry) return;
-  const typeOrder = ['current-esr', 'next-esr', 'release'];
-  const entries = typeOrder
-    .map(type => reportEntry.compat.find(c => c.type === type))
-    .filter(Boolean);
+
+  const entriesByVersion = new Map(reportEntry.compat.map(c => [c.appVersion, c]));
+  const entries = [...entriesByVersion.values()]
+    .sort((a, b) => parseInt(a.appVersion, 10) - parseInt(b.appVersion, 10));
+
   if (entries.length) {
     const parts = entries.map(c => {
-      const isESR = c.type !== 'release';
+      const isESR = c.type === 'current-esr' || c.type === 'next-esr';
       const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
       const compatible = c.extVersion != null;
       return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
@@ -692,16 +741,11 @@ function generalResult(result) {
 
 /**
  * Renders a "no results" card.
- * 
- * @param {string} query - The search string that yielded no results.
- * 
+ *
  * @returns {DocumentFragment} The rendered empty-result card.
  */
-function emptyResult(query) {
+function emptyResult() {
   let el = cloneTemplate(TEMPLATES.results.empty);
-  $('.query', el).textContent = query;
-  //$('.button', el).href =
-  //  `https://addons.thunderbird.net/search/?q=${query}&appver=${USED_VERSION}.0`;
   return el;
 }
 
@@ -710,18 +754,58 @@ function emptyResult(query) {
  * the current version or not yet updated.
  *
  * @param {AtnAddon} addon - ATN Add-on metadata.
- * @param {boolean} isCompatible - True if the Add-on is compatible with
+ * @param {boolean} isCompatibleWithUsedVersion - True if the Add-on is compatible with
  *    the user's Thunderbird version.
  * @param {ReportAddon} [reportEntry] - Report entry for this add-on; used to
  *    populate compat info.
  *
  * @returns {DocumentFragment} The rendered maintained-result card.
  */
-function maintainedResult(addon, isCompatible, reportEntry) {
-  let el = cloneTemplate(
-    isCompatible ? TEMPLATES.results.compat : TEMPLATES.results.notyetcompat
-  );
-  $('.usedVersion', el).textContent = USED_VERSION;
+function maintainedResult(addon, isCompatibleWithUsedVersion, reportEntry) {
+  // Include the user's own version.
+  if (!reportEntry.compat.some(c => c.appVersion === CONTEXT.usedVersion)) {
+    reportEntry.compat.push({
+      appVersion: CONTEXT.usedVersion,
+      type: "release", // or "other"
+      extVersion: isCompatibleWithUsedVersion 
+        ? addon.current_version.version
+        : undefined,
+    });
+  }
+
+  const compatEntries = (reportEntry?.compat ?? [])
+    .filter(c => !!c.extVersion)
+    .map(c => {
+      const isESR = c.type === 'current-esr' || c.type === 'next-esr';
+      return {
+        versionInt: parseInt(c.appVersion, 10),
+        label: `Thunderbird\u00A0${c.appVersion}${isESR ? '\u00A0ESR' : ''}`,
+      };
+    });
+  compatEntries.sort((a, b) => a.versionInt - b.versionInt);
+
+  // If CONTEXT.usedVersion is compatible, mention only that in the header.
+  const usedEntry = compatEntries.find(c => c.versionInt === CONTEXT.usedVersionInt);
+  const labels = usedEntry ? [usedEntry.label] : compatEntries.map(e => e.label);
+
+  let template;
+  if (isCompatibleWithUsedVersion) {
+    template = TEMPLATES.results.compat;
+  } else if (labels.length) {
+    template = TEMPLATES.results.notfullycompat;
+  } else {
+    template = TEMPLATES.results.notyetcompat;
+  }
+  let el = cloneTemplate(template);
+
+  const compatVersionEl = $('.compatVersion', el);
+  if (compatVersionEl) {
+    const conjunction = isCompatibleWithUsedVersion ? "and" : "or";
+    const displayVersion = labels.length === 1
+      ? labels[0]
+      : `${labels.slice(0, -1).join(", ")} ${conjunction} ${labels.at(-1)}`;
+    compatVersionEl.textContent = displayVersion;
+  }
   $('.button', el).href = addon.current_version.url;
 
   const iconEl = $('.icon', el);
