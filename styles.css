@@ -74,6 +74,12 @@ input.search {
   color: #000;
 }
 
+.note {
+  font-size: .9em;
+  font-weight: 600;
+  color: #000;
+}
+
 .legacy b {
   color: #000;
 }

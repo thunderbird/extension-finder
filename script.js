@@ -44,10 +44,6 @@ class StorageWithTTL {
 // Current Thunderbird version used for compatibility checks. Set dynamically
 // from product-details.mozilla.org; falls back to 128 if the fetch fails.
 let USED_VERSION = "128";
-let THUNDERBIRD_ESR = null;
-let THUNDERBIRD_ESR_NEXT = null;
-let LATEST_THUNDERBIRD_VERSION = null;
-
 
 // Define how old the latest version of an add-on may be, before it is
 // considered unmaintained.
@@ -55,7 +51,7 @@ const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
 
 const YAML_URL = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml";
 const PRODUCT_URL = "https://product-details.mozilla.org/1.0/thunderbird_versions.json";
-const REPORT_URL = "https://raw.githubusercontent.com/thunderbird/webext-reports/main/docs/all.json"
+const REPORT_URL = "https://raw.githubusercontent.com/thunderbird/webext-reports/main/docs/all.json";
 const CONTEXT = {}
 const DB = new StorageWithTTL();
 
@@ -175,7 +171,7 @@ const TEMPLATES = {
  *
  * @typedef {Object} ReportAddon
  *
- * @property {string} id - The Add-on GUID.
+ * @property {string} id - The add-on ID.
  * @property {string} name - Display name of the Add-on.
  * @property {Object.<string, string>} icons - Icon URLs keyed by pixel size
  *    (e.g. "32", "64").
@@ -287,10 +283,7 @@ async function loadVersions() {
       versions = await requestJson(PRODUCT_URL);
       await DB.set('versions', versions);
     }
-    THUNDERBIRD_ESR = versions.THUNDERBIRD_ESR;
-    THUNDERBIRD_ESR_NEXT = versions.THUNDERBIRD_ESR_NEXT;
-    LATEST_THUNDERBIRD_VERSION = versions.LATEST_THUNDERBIRD_VERSION;
-    USED_VERSION = THUNDERBIRD_ESR.split(".")[0];
+    USED_VERSION = versions.THUNDERBIRD_ESR.split(".")[0];
   } catch (e) {
     console.error("Failed to fetch Thunderbird versions:", e);
   }
@@ -373,13 +366,14 @@ function process(entry) {
 
 /**
  * Runs a search and renders results into the output element.
- * If the query matches a transmitted Add-on name not in the local database,
- * shows a maintained/compat result instead.
+ * If the query exactly matches an Add-on name, shows a maintained/compat result
+ * in addition to possible alternatives.
  * 
  * @param {string|null} query - The search string, or null to show all addons.
  */
 async function search(query) {
   CONTEXT.replacementsListIntro.hidden = true;
+  CONTEXT.outEl.innerHTML = '';
 
   const reportEntry = CONTEXT.report?.addons.find(
     a => a.name.toLowerCase() === query?.toLowerCase()
@@ -391,6 +385,7 @@ async function search(query) {
   // If the user has entered the name of an existing, specific add-on, check if
   // the add-on is compatible and simply needs to be updated, or if it is still
   // maintained but not yet compatible.
+  let empty = true;
   if (addonId) {
     const addon = await getAddonData(addonId);
     if (addon) {
@@ -399,28 +394,26 @@ async function search(query) {
       if (
         compat &&
         (!compat.max || compat.max == "*" ||
-          parseInt(compat.max.toString().split(".")[0], 10) >= USED_VERSION)
+          parseInt(compat.max.toString().split(".")[0], 10) >= parseInt(USED_VERSION, 10))
       ) {
-        CONTEXT.outEl.innerHTML = '';
-        CONTEXT.outEl.appendChild(maintainedResult(query, addon, true, reportEntry));
-        return;
-      }
-
-      // Is it still maintained?
-      let files = addon?.current_version?.files;
-      if (files.length > 0 &&
-        (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
-        CONTEXT.outEl.innerHTML = '';
-        CONTEXT.outEl.appendChild(maintainedResult(query, addon, false, reportEntry));
-        return;
+        CONTEXT.outEl.appendChild(maintainedResult(addon, true, reportEntry));
+        empty = false;
+      } else {
+        // Is it still maintained?
+        let files = addon?.current_version?.files;
+        if (files?.length > 0 &&
+          (new Date() - new Date(files[0].created)) < MAINTAINED_SPAN) {
+          CONTEXT.outEl.appendChild(maintainedResult(addon, false, reportEntry));
+          empty = false;
+        }
       }
     }
   }
 
   // Show alternatives.
-  let results, out;
+  let out;
   if (query) {
-    results = CONTEXT.idx.search('*' + query + '*');
+    const results = CONTEXT.idx.search('*' + query + '*');
     out = results.map(r => CONTEXT.addons[r.ref]);
     if (CONTEXT.exactmatch.checked) {
       out = out.filter(f => f.name.toLowerCase() == query.toLowerCase());
@@ -430,12 +423,11 @@ async function search(query) {
       out = out.filter(f =>
         words.every(word => f.name.toLowerCase().includes(word)));
     }
-  } else {
+  } else if (empty) {
     CONTEXT.replacementsListIntro.hidden = false;
     out = CONTEXT.allAddons;
   }
 
-  CONTEXT.outEl.innerHTML = '';
   out.forEach(o => o.suggested.reportEntry = CONTEXT.report?.addons.find(
     a => a.id === o.suggested.id
   ));
@@ -443,7 +435,7 @@ async function search(query) {
 
   if (out.length) {
     out.forEach(r => CONTEXT.outEl.appendChild(resultRow(r)));
-  } else {
+  } else if (empty) {
     CONTEXT.outEl.appendChild(emptyResult(query));
   }
 }
@@ -578,10 +570,45 @@ function resultRow(result) {
  *
  * @param {AtnAddon} addon - The ATN Add-on object.
  *
- * @returns {string} The resolved display name.
+ * @returns {string|undefined} The resolved display name.
  */
 function resolveAddonName(addon) {
   return addon?.name?.["en-US"] ?? Object.values(addon?.name ?? {})[0];
+}
+
+/**
+ * Resolves the display summary for an ATN Add-on, falling back to the first
+ * available locale if "en-US" is not present.
+ *
+ * @param {AtnAddon} addon - The ATN Add-on object.
+ *
+ * @returns {string|undefined} The resolved summary string, or undefined.
+ */
+function resolveAddonSummary(addon) {
+  return addon?.summary?.["en-US"] ?? Object.values(addon?.summary ?? {})[0];
+}
+
+/**
+ * Renders compatibility info into a .compat-info element.
+ *
+ * @param {Element|null} compatEl - The element to render into.
+ * @param {ReportAddon} [reportEntry] - The report entry to render.
+ */
+function renderCompatInfo(compatEl, reportEntry) {
+  if (!compatEl || !reportEntry) return;
+  const typeOrder = ['current-esr', 'next-esr', 'release'];
+  const entries = typeOrder
+    .map(type => reportEntry.compat.find(c => c.type === type))
+    .filter(Boolean);
+  if (entries.length) {
+    const parts = entries.map(c => {
+      const isESR = c.type !== 'release';
+      const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
+      const compatible = c.extVersion != null;
+      return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
+    });
+    compatEl.innerHTML = parts.join(' ');
+  }
 }
 
 /**
@@ -589,8 +616,7 @@ function resolveAddonName(addon) {
  *
  * @param {string} id - The Add-on ID.
  *
- * @returns {Promise<{addon: AtnAddon, name: string}>} Resolved ATN Add-on
- *    metadata and the display name to use.
+ * @returns {Promise<AtnAddon>} Resolved ATN Add-on metadata.
  */
 async function getAddonData(id) {
   const cached = await DB.get(`addon:${id}`);
@@ -631,26 +657,12 @@ function addonResult(result) {
     .then(addon => {
       authorEl.textContent = addon.authors.map(a => a.name).join(', ');
       iconEl.src = addon.icon_url;
-      if (addon.summary["en-US"]) {
-        descEl.insertAdjacentHTML('afterbegin', addon.summary["en-US"]);
+      const summary = resolveAddonSummary(addon);
+      if (summary) {
+        descEl.insertAdjacentHTML('afterbegin', summary);
       }
 
-      const reportEntry = result.suggested.reportEntry;
-      if (reportEntry) {
-        const typeOrder = ['current-esr', 'next-esr', 'release'];
-        const entries = typeOrder
-          .map(type => reportEntry.compat.find(c => c.type === type))
-          .filter(Boolean);
-        if (entries.length) {
-          const parts = entries.map(c => {
-            const isESR = c.type !== 'release';
-            const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
-            const compatible = c.extVersion != null;
-            return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
-          });
-          compatEl.innerHTML = parts.join(' ');
-        }
-      }
+      renderCompatInfo(compatEl, result.suggested.reportEntry);
     }).catch(console.error);
 
   return el;
@@ -679,8 +691,7 @@ function generalResult(result) {
 }
 
 /**
- * Renders a "no results" card with a link to search ATN directly. Only major
- * versions are considered (e.g. XXX.0).
+ * Renders a "no results" card.
  * 
  * @param {string} query - The search string that yielded no results.
  * 
@@ -689,8 +700,8 @@ function generalResult(result) {
 function emptyResult(query) {
   let el = cloneTemplate(TEMPLATES.results.empty);
   $('.query', el).textContent = query;
-  $('.button', el).href =
-    `https://addons.thunderbird.net/search/?q=${query}&appver=${USED_VERSION}.0`;
+  //$('.button', el).href =
+  //  `https://addons.thunderbird.net/search/?q=${query}&appver=${USED_VERSION}.0`;
   return el;
 }
 
@@ -698,53 +709,35 @@ function emptyResult(query) {
  * Renders a card indicating the Add-on is still active, either compatible with
  * the current version or not yet updated.
  *
- * @param {string} query - The Add-on name.
  * @param {AtnAddon} addon - ATN Add-on metadata.
  * @param {boolean} isCompatible - True if the Add-on is compatible with
  *    the user's Thunderbird version.
  * @param {ReportAddon} [reportEntry] - Report entry for this add-on; used to
- *    populate compat info in the notyetcompat card.
+ *    populate compat info.
  *
  * @returns {DocumentFragment} The rendered maintained-result card.
  */
-function maintainedResult(query, addon, isCompatible, reportEntry) {
+function maintainedResult(addon, isCompatible, reportEntry) {
   let el = cloneTemplate(
     isCompatible ? TEMPLATES.results.compat : TEMPLATES.results.notyetcompat
   );
-  const queryEl = $('.query', el);
-  if (queryEl) queryEl.textContent = query;
   $('.usedVersion', el).textContent = USED_VERSION;
   $('.button', el).href = addon.current_version.url;
 
   const iconEl = $('.icon', el);
   if (iconEl) iconEl.src = addon.icon_url;
   const nameEl = $('.alt-name', el);
-  if (nameEl) nameEl.textContent = query;
+  if (nameEl) nameEl.textContent = resolveAddonName(addon);
   const descEl = $('.alt-desc', el);
-  if (descEl && addon.summary?.["en-US"]) descEl.insertAdjacentHTML('afterbegin', addon.summary["en-US"]);
+  const summary = resolveAddonSummary(addon);
+  if (descEl && summary) descEl.insertAdjacentHTML('afterbegin', summary);
   const authorEl = $('.alt-author', el);
   if (authorEl) authorEl.textContent = addon.authors.map(a => a.name).join(', ');
 
-  const compatEl = $('.compat-info', el);
-  if (compatEl && reportEntry) {
-    const typeOrder = ['current-esr', 'next-esr', 'release'];
-    const entries = typeOrder
-      .map(type => reportEntry.compat.find(c => c.type === type))
-      .filter(Boolean);
-    if (entries.length) {
-      const parts = entries.map(c => {
-        const isESR = c.type !== 'release';
-        const label = `Thunderbird ${c.appVersion}${isESR ? ' ESR' : ''}`;
-        const compatible = c.extVersion != null;
-        return `<span class="compat-entry">${label} ${compatible ? '<span style="color:#267a00">✓</span>' : '<span style="color:#c00">✗</span>'}</span>`;
-      });
-      compatEl.innerHTML = parts.join(' ');
-    }
-  }
+  renderCompatInfo($('.compat-info', el), reportEntry);
 
   return el;
 }
-
 
 window.addEventListener('load', function (e) {
   init();
