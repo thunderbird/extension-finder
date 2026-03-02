@@ -15,7 +15,7 @@
       },
       "ESR_MARKER": {
         "content": "$3",
-        "example": " (installed)"
+        "example": "installed"
       },
       "RELEASE_MARKER": {
         "content": "$4",
@@ -23,8 +23,37 @@
       }
     }
   },
+  "pageTitleVersionInfoWithNextESR": {
+    "message": "The current Thunderbird releases are Thunderbird\u00A0$ESR$\u00A0ESR$ESR_MARKER$, Thunderbird\u00A0$NEXTESR$\u00A0ESR$NEXTESR_MARKER$, and Thunderbird\u00A0$RELEASE$$RELEASE_MARKER$.",
+    "placeholders": {
+      "ESR": {
+        "content": "$1",
+        "example": "140"
+      },
+      "NEXTESR": {
+        "content": "$2",
+        "example": "153"
+      },
+      "RELEASE": {
+        "content": "$3",
+        "example": "148"
+      },
+      "ESR_MARKER": {
+        "content": "$4",
+        "example": ""
+      },
+      "NEXTESR_MARKER": {
+        "content": "$5",
+        "example": "installed"
+      },
+      "RELEASE_MARKER": {
+        "content": "$6",
+        "example": ""
+      }
+    }
+  },
   "versionInstalled": {
-    "message": " (installed)"
+    "message": "installed"
   },
   "versionInstalledInfo": {
     "message": "The installed version is Thunderbird\u00A0$VERSION$.",
