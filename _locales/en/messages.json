@@ -1,0 +1,86 @@
+{
+  "pageTitle": {
+    "message": "Find alternatives for extensions incompatible with recent versions of Thunderbird."
+  },
+  "pageTitleVersionInfo": {
+    "message": "The current Thunderbird releases are Thunderbird\u00A0$ESR$\u00A0ESR$ESR_MARKER$ and Thunderbird\u00A0$RELEASE$$RELEASE_MARKER$.",
+    "placeholders": {
+      "ESR": {
+        "content": "$1",
+        "example": "140"
+      },
+      "RELEASE": {
+        "content": "$2",
+        "example": "148"
+      },
+      "ESR_MARKER": {
+        "content": "$3",
+        "example": " (installed)"
+      },
+      "RELEASE_MARKER": {
+        "content": "$4",
+        "example": ""
+      }
+    }
+  },
+  "versionInstalled": {
+    "message": " (installed)"
+  },
+  "versionInstalledInfo": {
+    "message": "The installed version is Thunderbird\u00A0$VERSION$.",
+    "placeholders": {
+      "VERSION": {
+        "content": "$1",
+        "example": "144"
+      }
+    }
+  },
+  "inputPlaceholderLoading": {
+    "message": "loading data..."
+  },
+  "inputPlaceholder": {
+    "message": "name of an extension"
+  },
+  "suggestedAlternative": {
+    "message": "suggested alternative:"
+  },
+  "byAuthor": {
+    "message": "by"
+  },
+  "learnMore": {
+    "message": "Learn More"
+  },
+  "showAddOn": {
+    "message": "Show Add-on"
+  },
+  "noAlternativesFound": {
+    "message": "No alternatives found."
+  },
+  "noteCompat": {
+    "message": "The add-on seems to be maintained and is compatible with"
+  },
+  "noteNotyetcompat": {
+    "message": "The add-on seems to be maintained, but a compatible version has not yet been released."
+  },
+  "noteNotfullycompat": {
+    "message": "The add-on seems to be maintained, but requires"
+  },
+  "experimentInfoSummary": {
+    "message": "This add-on is best used with Thunderbird ESR. Why?"
+  },
+  "experimentInfoBody": {
+    "message": "This add-on uses Experiment APIs, privileged interfaces that go beyond what standard WebExtensions allow. Each new major Thunderbird version requires the maintainer to verify and update these interfaces. Since Thunderbird's default release channel ships a new major version roughly every four weeks, volunteer developers may not always be able to keep pace. If an update is missed, the add-on will break and disrupt your workflow. Updates to Experiment API add-ons also require additional review time, which can cause further delays."
+  },
+  "experimentInfoBodyESRvsRelease": {
+    "message": "Thunderbird ESR on the other hand is updated only for bug and security fixes, so its core code changes infrequently and Experiment APIs remain largely stable between versions. It is therefore the recommended choice for users who rely on a stable work environment, including non-breaking add-ons with Experiment APIs."
+  },
+  "helpSummary": {
+    "message": "Still showing as incompatible?"
+  },
+  "helpBody1": {
+    "message": "Directly after updating Thunderbird, it is possible that the add-on is still marked as incompatible. Either the add-on manager did not update the displayed information after the automatic add-on update (re-opening the add-on manager should fix that), or the automatic update check failed due to a connection timeout to addons.thunderbird.net."
+  },
+  "helpBody2": {
+    "message": "Manually search for add-on updates by clicking on the gear menu in the add-on manager as shown below."
+  }
+}

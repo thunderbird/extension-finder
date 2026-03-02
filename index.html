@@ -9,40 +9,42 @@
   </head>
   <body>
     <section>
-      <h1>
-        Find alternatives for extensions incompatible with the most recent version of Thunderbird.
-      </h1>
-      <input id="extensionFinderSearchInput" class="search" disabled placeholder="loading data...">
+      <h1 data-i18n-content="pageTitle"></h1>
+      <p id="pageTitleVersionInfo" hidden><span id="versionInfoMain"></span> <span id="versionInstalledInfo" hidden></span></p>
+      <input id="extensionFinderSearchInput" class="search" disabled
+        data-i18n-placeholder="inputPlaceholderLoading">
       <datalist id="addon-suggestions"></datalist>
-      <div class="smallprint" id="replacementsListIntro" hidden="true">
-        <p>The following are recommended replacements for extensions that may not work in the most recent version of Thunderbird.</p>
-      </div>
       <ul class="out">
         <template id="search-result-addon">
           <li>
             <div class="legacy">
               <b class="legacy-name"></b>
-              suggested alternative:
+              <span data-i18n-content="suggestedAlternative"></span>
             </div>
             <div class="alternative">
               <img class="icon">
               <div class="info">
                 <h3 class="alt-name"></h3>
                 <p class="alt-desc"></p>
-                <div class="byline">by <span class="alt-author"></span></div>
-                <div class="compat-info byline"></div>
+                <div class="byline"><span data-i18n-content="byAuthor"></span> <span class="alt-author"></span></div>
               </div>
               <div class="cta">
-                <a class="button">Learn More</a>
+                <a class="button" data-i18n-content="learnMore"></a>
+                <div class="compat-info"></div>
               </div>
             </div>
+            <details class="experiment-info">
+              <summary data-i18n-content="experimentInfoSummary"></summary>
+              <p data-i18n-content="experimentInfoBody"></p>
+              <p data-i18n-content="experimentInfoBodyESRvsRelease"></p>
+            </details>
           </li>
         </template>
         <template id="search-result-general">
           <li>
             <div class="legacy">
               <b class="legacy-name"></b>
-              suggested alternative:
+              <span data-i18n-content="suggestedAlternative"></span>
             </div>
             <div class="alternative noslug">
               <div class="info">
@@ -50,79 +52,92 @@
                 <div class="alt-desc"></div>
               </div>
               <div class="cta">
-                <a class="button">Learn More</a>
+                <a class="button" data-i18n-content="learnMore"></a>
               </div>
             </div>
           </li>
         </template>
         <template id="search-result-empty">
           <li class="noresults">
-            <h2>
-              No alternatives found.
-            </h2>
+            <h2 data-i18n-content="noAlternativesFound"></h2>
           </li>
         </template>
         <template id="search-result-compat">
           <li>
             <div class="note">
-              The add-on seems to be maintained and is compatible with <span class="compatVersion"></span>.
+              <span data-i18n-content="noteCompat"></span>
+              <span class="compatVersion"></span>.
             </div>
             <div class="alternative">
               <img class="icon">
               <div class="info">
                 <h3 class="alt-name"></h3>
                 <p class="alt-desc"></p>
-                <div class="byline">by <span class="alt-author"></span></div>
-                <div class="compat-info byline"></div>
+                <div class="byline"><span data-i18n-content="byAuthor"></span> <span class="alt-author"></span></div>
               </div>
               <div class="cta">
-                <a class="button">Show Add-on</a>
+                <a class="button" data-i18n-content="showAddOn"></a>
+                <div class="compat-info"></div>
               </div>
             </div>
+            <details class="experiment-info">
+              <summary data-i18n-content="experimentInfoSummary"></summary>
+              <p data-i18n-content="experimentInfoBody"></p>
+              <p data-i18n-content="experimentInfoBodyESRvsRelease"></p>
+            </details>
             <details class="help">
-              <summary>Still showing as incompatible?</summary>
-              <p>Directly after updating Thunderbird, it is possible that the add-on is still marked as incompatible. Either the add-on manager did not update the displayed information after the automatic add-on update (re-opening the add-on manger should fix that), or the automatic update check failed due to a connection timeout to addons.thunderbird.net.</p>
-              <p>Manually search for add-on updates by clicking on the gear menu in the add-on manager as shown below.</p>
+              <summary data-i18n-content="helpSummary"></summary>
+              <p data-i18n-content="helpBody1"></p>
+              <p data-i18n-content="helpBody2"></p>
               <img src="update-addons.png"/>
             </details>
           </li>
         </template>
         <template id="search-result-notyetcompat">
           <li>
-            <div class="note">
-              The add-on seems to be maintained, but a compatible version has not yet been released.
-            </div>
+            <div class="note" data-i18n-content="noteNotyetcompat"></div>
             <div class="alternative">
               <img class="icon">
               <div class="info">
                 <h3 class="alt-name"></h3>
                 <p class="alt-desc"></p>
-                <div class="byline">by <span class="alt-author"></span></div>
-                <div class="compat-info byline"></div>
+                <div class="byline"><span data-i18n-content="byAuthor"></span> <span class="alt-author"></span></div>
               </div>
               <div class="cta">
-                <a class="button">Show Add-on</a>
+                <a class="button" data-i18n-content="showAddOn"></a>
+                <div class="compat-info"></div>
               </div>
             </div>
+            <details class="experiment-info">
+              <summary data-i18n-content="experimentInfoSummary"></summary>
+              <p data-i18n-content="experimentInfoBody"></p>
+              <p data-i18n-content="experimentInfoBodyESRvsRelease"></p>
+            </details>
           </li>
         </template>
         <template id="search-result-notfullycompat">
           <li>
             <div class="note">
-              The add-on seems to be maintained, but requires <span class="compatVersion"></span>.
+              <span data-i18n-content="noteNotfullycompat"></span>
+              <span class="compatVersion"></span>.
             </div>
             <div class="alternative">
               <img class="icon">
               <div class="info">
                 <h3 class="alt-name"></h3>
                 <p class="alt-desc"></p>
-                <div class="byline">by <span class="alt-author"></span></div>
-                <div class="compat-info byline"></div>
+                <div class="byline"><span data-i18n-content="byAuthor"></span> <span class="alt-author"></span></div>
               </div>
               <div class="cta">
-                <a class="button">Show Add-on</a>
+                <a class="button" data-i18n-content="showAddOn"></a>
+                <div class="compat-info"></div>
               </div>
             </div>
+            <details class="experiment-info">
+              <summary data-i18n-content="experimentInfoSummary"></summary>
+              <p data-i18n-content="experimentInfoBody"></p>
+              <p data-i18n-content="experimentInfoBodyESRvsRelease"></p>
+            </details>
           </li>
         </template>
       </ul>

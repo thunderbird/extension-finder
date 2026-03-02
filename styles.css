@@ -52,11 +52,19 @@ section {
   margin: 2em auto;
 }
 
+#pageTitleVersionInfo {
+  margin-top: 0.25em;
+  margin-bottom: 0;
+  text-align: center;
+  font-size: 0.9em;
+  color: #555;
+}
+
 input.search {
   display: block;
   width: 100%;
   max-width: 600px;
-  margin: 0 auto;
+  margin: 2em auto;
   font-size: 1.2rem;
   padding: .75rem 1.5rem;
   border: 1px solid #444;
@@ -145,26 +153,47 @@ a:link {
   grid-column: span 2;
 }
 
-details.help {
+details:is(.help, .experiment-info) {
   margin: 1.5rem -2rem -1.5rem;
   padding: .75rem 2rem;
-  background: hsl(199, 30%, 82%);
   border-top: 1px solid hsl(199, 50%, 62%);
 }
 
-details.help summary {
+/* When two boxes are stacked, remove the margins between them so they sit
+   flush. :not([hidden]) is required on both sides: the CSS + and :has()
+   selectors match hidden siblings too (display:none does not affect DOM
+   adjacency), so without it a single visible box would incorrectly have its
+   bottom margin zeroed when the other box is present but hidden. */
+details:is(.help, .experiment-info):not([hidden]):has(+ details:is(.help, .experiment-info):not([hidden])) {
+  margin-bottom: 0;
+}
+
+details:is(.help, .experiment-info):not([hidden]) + details:is(.help, .experiment-info):not([hidden]) {
+  margin-top: 0;
+}
+
+details:is(.help, .experiment-info) summary {
   cursor: pointer;
   font-size: .9em;
   color: #333;
 }
 
-details.help[open] summary {
+details:is(.help, .experiment-info)[open] summary {
   margin-bottom: 1rem;
 }
 
-details.help p {
+details:is(.help, .experiment-info) p {
   font-size: .9em;
   text-align: justify;
+}
+
+details.help {
+  background: hsl(199, 30%, 82%);
+}
+
+details.experiment-info {
+  background: hsl(40, 60%, 88%);
+  border-top-color: hsl(40, 50%, 65%);
 }
 
 details.help img {
@@ -174,10 +203,26 @@ details.help img {
   max-width: 100%;
 }
 
+.cta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .5rem;
+}
+
+.cta .button {
+  margin: 0;
+}
+
+.compat-info {
+  margin-top: auto;
+  font-size: .9em;
+}
+
 .compat-entry {
-  display: inline-block;
-  margin-right: .5em;
+  display: block;
   font-style: italic;
+  text-align: right;
 }
 
 @media screen and (max-width: 500px) {
@@ -203,7 +248,7 @@ details.help img {
     font-size: .9rem;
   }
 
-  details.help {
+  details:is(.help, .experiment-info) {
     margin: 1rem -1rem -1rem;
     padding: .75rem 1rem;
   }
