@@ -51,10 +51,10 @@ class StorageWithTTL {
 const MAINTAINED_SPAN = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
 
 const YAML_URL = "https://raw.githubusercontent.com/thunderbird/extension-finder/master/data.yaml";
-const PRODUCT_URL = "https://product-details.mozilla.org/1.0/thunderbird_versions.json";
 const REPORT_URL = "https://raw.githubusercontent.com/thunderbird/webext-reports/main/docs/all.json";
 const CONTEXT = {}
 const DB = new StorageWithTTL();
+let MESSAGES = {};
 
 const TEMPLATES = {
   results: {
@@ -276,18 +276,69 @@ async function requestJson(url) {
 }
 
 /**
- * Fetches current Thunderbird version info from product-details.mozilla.org.
+ * Returns the localized message string for the given key, substituting any
+ * WebExtension-style placeholders defined in the message entry. Substitutions
+ * are provided as an array of strings mapped to $1, $2, … in each
+ * placeholder's content field. Returns the key itself if the key is not
+ * present in the loaded messages.
+ *
+ * @param {string} key - The message identifier.
+ * @param {string[]} [substitutions=[]] - Positional substitution values.
+ *
+ * @returns {string} The localized string, or the key if not found.
  */
-async function loadVersions() {
-  try {
-    let versions = await DB.get('versions');
-    if (!versions) {
-      versions = await requestJson(PRODUCT_URL);
-      await DB.set('versions', versions);
+function getMessage(key, substitutions = []) {
+  const entry = MESSAGES[key];
+  if (!entry) return key;
+
+  let msg = entry.message;
+  if (entry.placeholders) {
+    for (const [name, ph] of Object.entries(entry.placeholders)) {
+      const content = ph.content.replace(/\$(\d+)/g, (_, n) =>
+        substitutions[parseInt(n, 10) - 1] ?? ''
+      );
+      msg = msg.replace(new RegExp(`\\$${name}\\$`, 'gi'), content);
     }
-  } catch (e) {
-    console.error("Failed to fetch Thunderbird versions:", e);
   }
+  return msg;
+}
+
+/**
+ * Fetches and returns the locale messages for the given language code, falling
+ * back to "en" if the requested locale file is not found.
+ *
+ * @param {string} [lang="en"] - BCP 47 language subtag (e.g. "de", "fr").
+ *
+ * @returns {Promise<Object.<string, {message: string}>>} Parsed messages object.
+ */
+async function loadLocale(lang = 'en') {
+  try {
+    const response = await fetch(`_locales/${lang}/messages.json`);
+    if (!response.ok) throw new Error(`Locale not found: ${lang}`);
+    return response.json();
+  } catch {
+    if (lang !== 'en') return loadLocale('en');
+    return {};
+  }
+}
+
+/**
+ * Localizes all elements within root that carry data-i18n-content or
+ * data-i18n-placeholder attributes. Also recurses into <template> element
+ * content, which is not traversed by querySelectorAll on the document.
+ *
+ * @param {Document|DocumentFragment|Element} [root=document] - The root to
+ *    localize within.
+ */
+function localizeDocument(root = document) {
+  root.querySelectorAll('[data-i18n-content]').forEach(el => {
+    el.textContent = getMessage(el.dataset.i18nContent);
+  });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = getMessage(el.dataset.i18nPlaceholder);
+  });
+  // <template> content is not visited by querySelectorAll on the document.
+  root.querySelectorAll('template').forEach(tmpl => localizeDocument(tmpl.content));
 }
 
 /**
@@ -380,7 +431,6 @@ function process(entry) {
 async function search(searchParams = {}) {
   const { reportEntry, query } = searchParams;
 
-  CONTEXT.replacementsListIntro.hidden = true;
   CONTEXT.outEl.innerHTML = '';
 
   // If the user has entered the name of an existing, specific add-on, check if
@@ -429,7 +479,6 @@ async function search(searchParams = {}) {
   } else {
     updateQueryInUrl();
     // Show all addons if search did not specify a query or a reportEntry.
-    CONTEXT.replacementsListIntro.hidden = false;
     alternatives.push(...CONTEXT.allAddons);
   }
 
@@ -483,8 +532,11 @@ function updateQueryInUrl(key, value) {
  * wires up search event listeners.
  */
 async function init() {
-  const [, yamlData, report] = await Promise.all([
-    loadVersions(),
+  const lang = navigator.language.split('-')[0];
+  MESSAGES = await loadLocale(lang);
+  localizeDocument();
+
+  const [yamlData, report] = await Promise.all([
     loadData(),
     loadReports(),
   ]);
@@ -501,35 +553,61 @@ async function init() {
   const { idx, addons } = buildIndex(yamlData);
 
   let input = $('#extensionFinderSearchInput');
-  input.setAttribute('placeholder', 'name of an extension');
+  input.placeholder = getMessage('inputPlaceholder');
 
   let outEl = $('.out');
-  let replacementsListIntro = $('#replacementsListIntro');
-
   let allAddons = Object.values(addons).sort((a, b) =>
     a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
   let loc = new URL(window.location);
   let queryName = loc.searchParams.get("q");
-  if (queryName) queryName = decodeURIComponent(queryName);
 
   // Assign global CONTEXT
   CONTEXT.idx = idx;
   CONTEXT.addons = addons;
   CONTEXT.allAddons = allAddons;
   CONTEXT.outEl = outEl;
-  CONTEXT.replacementsListIntro = replacementsListIntro;
   CONTEXT.report = report;
 
-  // If running inside Thunderbird, override usedVersion with the actual
-  // running version rather than the product-details value.
+  // All report entries share the same set of tracked TB versions and types;
+  // use the first entry as the authoritative version list.
+  const referenceCompatEntry = CONTEXT.report.addons[0]?.compat ?? [];
+
+  // Use the last known ESR as the default for the used version.
+  CONTEXT.usedVersion = 
+    referenceCompatEntry.find(c => c.type === 'current-esr')?.appVersion ?? "128";
+
+  // Determine the actual used version from the UA when running inside Thunderbird.
   const lastUAToken = navigator.userAgent.split(" ").pop();
-  const versionString = lastUAToken.startsWith("Thunderbird")
-    ? lastUAToken.split("/").pop()
-    : await DB.get("versions").then(v => v?.THUNDERBIRD_ESR) ?? "128";
-  CONTEXT.usedVersion = versionString.split(".")[0];
+  CONTEXT.isThunderbird = lastUAToken.startsWith("Thunderbird");
+  if (CONTEXT.isThunderbird) {
+    CONTEXT.usedVersion = lastUAToken.split("/").pop().split(".")[0];
+  }
   CONTEXT.usedVersionInt = parseInt(CONTEXT.usedVersion, 10);
-  input.disabled = false;
+
+  // Update the page title to reflect the installed Thunderbird version.
+  if (CONTEXT.isThunderbird) {
+    CONTEXT.usedVersionType =
+      referenceCompatEntry.find(c => c.appVersion === CONTEXT.usedVersion)?.type ?? null;
+
+    const esrVersion = referenceCompatEntry.find(c => c.type === 'current-esr')?.appVersion ?? "";
+    const releaseVersion = referenceCompatEntry.find(c => c.type === 'release')?.appVersion ?? "";
+    const installedLabel = getMessage('versionInstalled');
+    const isESR = CONTEXT.usedVersionType === 'current-esr' || CONTEXT.usedVersionType === 'next-esr';
+    const isRelease = CONTEXT.usedVersionType === 'release';
+    $('#versionInfoMain').textContent = getMessage('pageTitleVersionInfo', [
+      esrVersion, releaseVersion,
+      isESR ? installedLabel : '',
+      isRelease ? installedLabel : '',
+    ]);
+    $('#pageTitleVersionInfo').hidden = false;
+
+    const installedInfoEl = $('#versionInstalledInfo');
+    installedInfoEl.hidden = isESR || isRelease;
+    if (!installedInfoEl.hidden) {
+      installedInfoEl.textContent = getMessage('versionInstalledInfo', [CONTEXT.usedVersion]);
+    }
+  }
 
   // Populate datalist with YAML unmaintained names and all report Add-on names.
   setDatalist(new Set([
@@ -537,6 +615,7 @@ async function init() {
     ...report.addons.map(a => a.name),
   ]));
 
+  input.disabled = false;
   input.focus();
 
   // The extension finder can be called with an id, which performs an exact search.
@@ -714,6 +793,13 @@ function addonResult(result) {
       renderCompatInfo(compatEl, result.suggested.reportEntry);
     }).catch(console.error);
 
+  const reportEntry = result.suggested.reportEntry;
+  const isExperiment = reportEntry?.compat.some(c => c.isExperiment) ?? false;
+  const compatWithESR = reportEntry?.compat.some(c =>
+    (c.type === 'current-esr' || c.type === 'next-esr') && c.extVersion != null
+  ) ?? false;
+  $('.experiment-info', el).hidden = !(isExperiment && compatWithESR);
+
   return el;
 }
 
@@ -766,7 +852,7 @@ function maintainedResult(addon, isCompatibleWithUsedVersion, reportEntry) {
   if (!reportEntry.compat.some(c => c.appVersion === CONTEXT.usedVersion)) {
     reportEntry.compat.push({
       appVersion: CONTEXT.usedVersion,
-      type: "release", // or "other"
+      type: "installed",
       extVersion: isCompatibleWithUsedVersion 
         ? addon.current_version.version
         : undefined,
@@ -819,6 +905,18 @@ function maintainedResult(addon, isCompatibleWithUsedVersion, reportEntry) {
   if (authorEl) authorEl.textContent = addon.authors.map(a => a.name).join(', ');
 
   renderCompatInfo($('.compat-info', el), reportEntry);
+
+  const helpEl = $('.help', el);
+  if (helpEl) helpEl.hidden = !CONTEXT.isThunderbird;
+
+  const isExperiment = reportEntry.compat.some(c => c.isExperiment);
+  const compatWithESR = reportEntry.compat.some(c =>
+    (c.type === 'current-esr' || c.type === 'next-esr') && c.extVersion != null
+  );
+  const experimentEl = $('.experiment-info', el);
+  if (experimentEl) {
+    experimentEl.hidden = !(isExperiment && compatWithESR);
+  }
 
   return el;
 }
