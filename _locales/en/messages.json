@@ -97,6 +97,12 @@
   "experimentInfoSummary": {
     "message": "This add-on is best used with Thunderbird ESR. Why?"
   },
+  "experimentInfoLearnMore": {
+    "message": "Learn more about Thunderbird release channels"
+  },
+  "experimentInfoDownloadESR": {
+    "message": "Download Thunderbird ESR"
+  },
   "experimentInfoBody": {
     "message": "This add-on uses Experiment APIs, privileged interfaces that go beyond what standard WebExtensions allow. Each new major Thunderbird version requires the maintainer to verify and update these interfaces. Since Thunderbird's default release channel ships a new major version roughly every four weeks, volunteer developers may not always be able to keep pace. If an update is missed, the add-on will break and disrupt your workflow. Updates to Experiment API add-ons also require additional review time, which can cause further delays."
   },
