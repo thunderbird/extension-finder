@@ -304,20 +304,23 @@ function getMessage(key, substitutions = []) {
 }
 
 /**
- * Fetches and returns the locale messages for the given language code, falling
- * back to "en" if the requested locale file is not found.
+ * Fetches and returns the locale messages for the given BCP 47 language tag,
+ * falling back first to the base language (e.g. "en" from "en-US"), then to
+ * "en-US", and finally to "en".
  *
- * @param {string} [lang="en"] - BCP 47 language subtag (e.g. "de", "fr").
+ * @param {string} [lang="en-US"] - BCP 47 language tag (e.g. "en-US", "de-AT").
  *
  * @returns {Promise<Object.<string, {message: string}>>} Parsed messages object.
  */
-async function loadLocale(lang = 'en') {
+async function loadLocale(lang = 'en-US') {
   try {
     const response = await fetch(`_locales/${lang}/messages.json`);
     if (!response.ok) throw new Error(`Locale not found: ${lang}`);
     return response.json();
   } catch {
-    if (lang !== 'en') return loadLocale('en');
+    const base = lang.split('-')[0];
+    if (base !== lang) return loadLocale(base);
+    if (lang !== 'en-US') return loadLocale('en-US');
     return {};
   }
 }
@@ -532,9 +535,20 @@ function updateQueryInUrl(key, value) {
  * wires up search event listeners.
  */
 async function init() {
-  const lang = navigator.language.split('-')[0];
+  const lang = navigator.language;
   MESSAGES = await loadLocale(lang);
   localizeDocument();
+
+  // Set the release channel links in all experiment-info templates,
+  // using the detected locale and letting the target sites handle any fallback.
+  const releaseChannelUrl = `https://support.thunderbird.net/${lang}/kb/choosing-thunderbird-release-channel`;
+  const esrDownloadUrl = `https://www.thunderbird.net/${lang}/download/esr`;
+  document.querySelectorAll('template').forEach(tmpl => {
+    const learnMore = tmpl.content.querySelector('.experiment-info-link');
+    if (learnMore) learnMore.href = releaseChannelUrl;
+    const download = tmpl.content.querySelector('.experiment-info-download');
+    if (download) download.href = esrDownloadUrl;
+  });
 
   const [yamlData, report] = await Promise.all([
     loadData(),
