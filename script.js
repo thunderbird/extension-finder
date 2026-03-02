@@ -585,28 +585,40 @@ async function init() {
   }
   CONTEXT.usedVersionInt = parseInt(CONTEXT.usedVersion, 10);
 
-  // Update the page title to reflect the installed Thunderbird version.
+  // Update the subtitle to show the current ESR and release versions, and
+  // highlight which one is installed when running inside Thunderbird.
   if (CONTEXT.isThunderbird) {
     CONTEXT.usedVersionType =
       referenceCompatEntry.find(c => c.appVersion === CONTEXT.usedVersion)?.type ?? null;
+  }
 
-    const esrVersion = referenceCompatEntry.find(c => c.type === 'current-esr')?.appVersion ?? "";
-    const releaseVersion = referenceCompatEntry.find(c => c.type === 'release')?.appVersion ?? "";
-    const installedLabel = getMessage('versionInstalled');
-    const isESR = CONTEXT.usedVersionType === 'current-esr' || CONTEXT.usedVersionType === 'next-esr';
-    const isRelease = CONTEXT.usedVersionType === 'release';
-    $('#versionInfoMain').textContent = getMessage('pageTitleVersionInfo', [
-      esrVersion, releaseVersion,
-      isESR ? installedLabel : '',
+  const esrVersion = referenceCompatEntry.find(c => c.type === 'current-esr')?.appVersion ?? "";
+  const releaseVersion = referenceCompatEntry.find(c => c.type === 'release')?.appVersion ?? "";
+  const nextESRVersion = referenceCompatEntry.find(c => c.type === 'next-esr')?.appVersion ?? "";
+  const isCurrentESR = CONTEXT.usedVersionType === 'current-esr';
+  const isNextESR = CONTEXT.usedVersionType === 'next-esr';
+  const isRelease = CONTEXT.usedVersionType === 'release';
+  const installedLabel = CONTEXT.isThunderbird ? ` (${getMessage('versionInstalled')})` : '';
+  if (nextESRVersion) {
+    $('#versionInfoMain').textContent = getMessage('pageTitleVersionInfoWithNextESR', [
+      esrVersion, nextESRVersion, releaseVersion,
+      isCurrentESR ? installedLabel : '',
+      isNextESR ? installedLabel : '',
       isRelease ? installedLabel : '',
     ]);
-    $('#pageTitleVersionInfo').hidden = false;
+  } else {
+    $('#versionInfoMain').textContent = getMessage('pageTitleVersionInfo', [
+      esrVersion, releaseVersion,
+      isCurrentESR ? installedLabel : '',
+      isRelease ? installedLabel : '',
+    ]);
+  }
+  $('#pageTitleVersionInfo').hidden = false;
 
-    const installedInfoEl = $('#versionInstalledInfo');
-    installedInfoEl.hidden = isESR || isRelease;
-    if (!installedInfoEl.hidden) {
-      installedInfoEl.textContent = getMessage('versionInstalledInfo', [CONTEXT.usedVersion]);
-    }
+  const installedInfoEl = $('#versionInstalledInfo');
+  installedInfoEl.hidden = !CONTEXT.isThunderbird || isCurrentESR || isNextESR || isRelease;
+  if (!installedInfoEl.hidden) {
+    installedInfoEl.textContent = getMessage('versionInstalledInfo', [CONTEXT.usedVersion]);
   }
 
   // Populate datalist with YAML unmaintained names and all report Add-on names.
