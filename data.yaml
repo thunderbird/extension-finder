@@ -193,9 +193,9 @@ r_id: quotecolors@thunderbird-mail.de
 ---
 u_name: Remove Duplicate Messages
 u_id: {12345678-1234-1234-1234-123456789abc}
-r_name: Remove Duplicate Messages (alternative)
-r_link: https://addons.thunderbird.net/addon/removedupes/
-r_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
+r_name: Duplicate Email Remover
+r_link: https://addons.thunderbird.net/addon/duplicate-email-remover/
+r_id: duplicate-email-remover@ljsch.local
 ---
 u_name: Remove Duplicate Messages (alternative)
 u_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
@@ -205,9 +205,9 @@ r_id: duplicate-email-remover@ljsch.local
 ---
 u_name: Remove Duplicates
 u_id: removedupes@dillinger
-r_name: Remove Duplicate Messages (alternative)
-r_link: https://addons.thunderbird.net/addon/removedupes/
-r_id: {a300a000-5e21-4ee0-a115-9ec8f4eaa92b}
+r_name: Duplicate Email Remover
+r_link: https://addons.thunderbird.net/addon/duplicate-email-remover/
+r_id: duplicate-email-remover@ljsch.local
 ---
 u_name: Sender Domain
 u_id: senderdomain@rcruzs00
